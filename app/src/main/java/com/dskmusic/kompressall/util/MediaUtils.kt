@@ -12,6 +12,15 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * URI a usar para leer el archivo: la ruta real en disco si se conoce (no depende del
+ * permiso temporal del content:// que el picker concede solo mientras la Activity que
+ * lo recibio sigue viva, y que se puede revocar al cerrar la app desde recientes aunque
+ * el proceso siga activo por el foreground service) o, si no, el content:// original.
+ */
+fun MediaEntry.sourceUri(): Uri =
+    realPath?.let { path -> File(path).takeIf { it.canRead() }?.let { Uri.fromFile(it) } } ?: uri
+
 object MediaUtils {
 
     /** Carga nombre, tamaño, tipo, fecha y ruta real de un URI. */

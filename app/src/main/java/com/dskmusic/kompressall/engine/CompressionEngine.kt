@@ -14,6 +14,7 @@ import com.dskmusic.kompressall.model.MediaEntry
 import com.dskmusic.kompressall.model.Phase
 import com.dskmusic.kompressall.model.Preset
 import com.dskmusic.kompressall.util.MediaUtils
+import com.dskmusic.kompressall.util.sourceUri
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -159,7 +160,7 @@ object CompressionEngine {
             Preset.LOW    -> Triple("jpeg", 45, 0.5f)
             Preset.MANUAL -> Triple(cfg.imageFormat, cfg.imageQuality, cfg.imageResolutionPct / 100f)
         }
-        val bytes = ImageCompressor.compress(ctx, item.uri, format, quality, scale)
+        val bytes = ImageCompressor.compress(ctx, item.sourceUri(), format, quality, scale)
             ?: return ItemResult(item.name, false, item.size, 0, false, error = "decode")
 
         // Si el resultado es mayor que el original, conservar el original
@@ -206,7 +207,7 @@ object CompressionEngine {
         ctx: Context, item: MediaEntry, cfg: JobConfig,
         destDir: File, videosDir: File, backupDir: File
     ): ItemResult {
-        val meta = VideoCompressor.readMeta(ctx, item.uri)
+        val meta = VideoCompressor.readMeta(ctx, item.sourceUri())
             ?: return ItemResult(item.name, true, item.size, 0, false, error = "metadata")
 
         val fraction = when (cfg.videoPreset) {
@@ -310,7 +311,7 @@ object CompressionEngine {
                 _state.update { it.copy(isProbePass = true) }
                 val probe = File(ctx.cacheDir, "ka_probe_${System.currentTimeMillis()}.mp4")
                 val probeErr = VideoCompressor.transcode(
-                    ctx, item.uri, probe, mime, videoBitrate, outDisplayHeight,
+                    ctx, item.sourceUri(), probe, mime, videoBitrate, outDisplayHeight,
                     outFps, srcFps, audioBps, audioPassthrough
                 ) { p -> _state.update { s -> s.copy(fileProgress = p * 0.5f) } }
                 if (probeErr == null && probe.length() > 0) {
@@ -322,7 +323,7 @@ object CompressionEngine {
             }
 
             val err = VideoCompressor.transcode(
-                ctx, item.uri, cache, mime, videoBitrate, outDisplayHeight,
+                ctx, item.sourceUri(), cache, mime, videoBitrate, outDisplayHeight,
                 outFps, srcFps, audioBps, audioPassthrough
             ) { p -> _state.update { s -> s.copy(fileProgress = p) } }
             if (err != null) {
@@ -386,7 +387,7 @@ object CompressionEngine {
     }
 
     private fun copyOriginal(ctx: Context, item: MediaEntry, dest: File) {
-        ctx.contentResolver.openInputStream(item.uri)?.use { input ->
+        ctx.contentResolver.openInputStream(item.sourceUri())?.use { input ->
             dest.outputStream().use { input.copyTo(it) }
         } ?: throw IOException("No se pudo leer el original")
     }
