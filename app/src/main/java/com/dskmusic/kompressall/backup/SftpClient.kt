@@ -38,6 +38,10 @@ class SftpSession private constructor(private val ssh: SSHClient, private val sf
             .sortedBy { it.name.lowercase() }
     }
 
+    /** Ruta absoluta real (el "." inicial del SFTP suele ser la home del usuario,
+     *  no la raiz, y por eso hace falta esto para poder navegar "hacia arriba"). */
+    fun canonicalize(path: String): String = sftp.canonicalize(path.trim().ifBlank { "." })
+
     override fun close() {
         try { sftp.close() } catch (_: Exception) {}
         try { ssh.disconnect() } catch (_: Exception) {}
@@ -93,6 +97,17 @@ object SftpClient {
             try {
                 SftpSession.open(host, port, username, password).use { session ->
                     Result.success(session.listDirs(path))
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    suspend fun canonicalize(host: String, port: Int, username: String, password: String, path: String): Result<String> =
+        withContext(Dispatchers.IO) {
+            try {
+                SftpSession.open(host, port, username, password).use { session ->
+                    Result.success(session.canonicalize(path))
                 }
             } catch (e: Exception) {
                 Result.failure(e)

@@ -54,6 +54,7 @@
     <string name="dest_test_ok">Connection successful</string>
     <string name="dest_test_fail">Couldn\'t connect: %1$s</string>
     <string name="dest_browse_error">Couldn\'t list this folder</string>
+    <string name="dest_browse_up">.. (up one level)</string>
     <string name="dest_browse_use_here">Use this folder</string>
     <string name="dest_delete_title">Delete this destination?</string>
     <string name="dest_delete_text">\"%1$s\" will be removed from your saved destinations.</string>

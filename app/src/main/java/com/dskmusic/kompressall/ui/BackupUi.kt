@@ -188,15 +188,23 @@ fun RemoteBrowserDialog(
     host: String, port: Int, username: String, password: String, startPath: String,
     onDismiss: () -> Unit, onPicked: (String) -> Unit
 ) {
-    var currentPath by remember { mutableStateOf(startPath.ifBlank { "." }) }
+    // El "." inicial del SFTP suele resolver a la home del usuario, no a la raiz del
+    // sistema; se resuelve primero a una ruta absoluta real para poder subir de nivel
+    // más allá de esa carpeta (root/administrador incluido).
+    var currentPath by remember { mutableStateOf<String?>(null) }
     var dirs by remember { mutableStateOf<List<RemoteDir>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf(false) }
 
+    LaunchedEffect(Unit) {
+        currentPath = SftpClient.canonicalize(host, port, username, password, startPath).getOrDefault("/")
+    }
+
     LaunchedEffect(currentPath) {
+        val path = currentPath ?: return@LaunchedEffect
         loading = true
         error = false
-        SftpClient.listDirs(host, port, username, password, currentPath)
+        SftpClient.listDirs(host, port, username, password, path)
             .onSuccess { dirs = it }
             .onFailure { error = true }
         loading = false
@@ -204,7 +212,7 @@ fun RemoteBrowserDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(currentPath) },
+        title = { Text(currentPath ?: "…") },
         text = {
             Box(Modifier.height(280.dp).fillMaxWidth()) {
                 when {
@@ -215,6 +223,19 @@ fun RemoteBrowserDialog(
                         modifier = Modifier.align(Alignment.Center)
                     )
                     else -> LazyColumn {
+                        val path = currentPath
+                        if (path != null && path != "/") {
+                            item {
+                                Text(
+                                    stringResource(R.string.dest_browse_up),
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { currentPath = path.substringBeforeLast('/').ifEmpty { "/" } }
+                                        .padding(vertical = 12.dp)
+                                )
+                            }
+                        }
                         items(dirs) { dir ->
                             Text(
                                 dir.name,
@@ -229,7 +250,7 @@ fun RemoteBrowserDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onPicked(currentPath) }) { Text(stringResource(R.string.dest_browse_use_here)) }
+            TextButton(onClick = { currentPath?.let(onPicked) }) { Text(stringResource(R.string.dest_browse_use_here)) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
