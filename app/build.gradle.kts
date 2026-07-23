@@ -31,6 +31,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Package distinto para que el build local de pruebas conviva sin chocar
+            // con la version real instalada desde la Release de GitHub.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             isMinifyEnabled = false
             if (!System.getenv("KEYSTORE_FILE").isNullOrBlank()) {
