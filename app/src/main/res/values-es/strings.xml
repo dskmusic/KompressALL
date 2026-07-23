@@ -21,6 +21,10 @@
     <string name="help_title">Cómo funciona KompressALL</string>
     <string name="help_text">1. Elige fotos y vídeos, o envíalos/ábrelos en la app desde la cámara o la galería.\n\n2. Elige un preset — Alta, Media (recomendado) o Máx. ahorro — para fotos y para vídeos, o ajústalo todo a mano con la opción +.\n\n3. Elige dónde guardar: una carpeta nueva con fecha, o reemplazar los originales (con copia de seguridad opcional).\n\n4. Toca Comprimir. Puedes minimizar la app — una notificación te avisa del progreso y te deja cancelar en cualquier momento.\n\n5. Revisa el resumen antes/después y comparte el resultado directamente si quieres.</string>
     <string name="help_got_it">Entendido</string>
+    <string name="update_available_title">Actualización disponible</string>
+    <string name="update_available_text">Hay disponible la versión %1$s. ¿Descargarla e instalarla?</string>
+    <string name="update_download">Descargar</string>
+    <string name="update_later">Más tarde</string>
 
     <!-- Config -->
     <string name="batch_summary">%1$d fotos · %2$d vídeos · %3$s</string>

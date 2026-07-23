@@ -23,6 +23,10 @@
     <string name="help_title">How KompressALL works</string>
     <string name="help_text">1. Pick photos and videos, or share/open them into the app from your camera or gallery.\n\n2. Choose a preset — High, Medium (recommended) or Max saving — for photos and for videos, or tweak everything manually with the + option.\n\n3. Pick where to save: a new dated folder, or replace the originals in place (with an optional backup).\n\n4. Tap Compress. You can minimize the app — a notification keeps you posted and lets you cancel anytime.\n\n5. Check the before/after summary and share the results straight from there if you like.</string>
     <string name="help_got_it">Got it</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_text">Version %1$s is available. Download and install it?</string>
+    <string name="update_download">Download</string>
+    <string name="update_later">Later</string>
 
     <!-- Config -->
     <string name="batch_summary">%1$d photos · %2$d videos · %3$s</string>

@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +60,8 @@ import com.dskmusic.kompressall.data.Settings as AppSettings
 import com.dskmusic.kompressall.model.EngineState
 import com.dskmusic.kompressall.model.ItemResult
 import com.dskmusic.kompressall.model.formatSize
+import com.dskmusic.kompressall.update.UpdateChecker
+import com.dskmusic.kompressall.update.UpdateInfo
 import java.io.File
 
 // ── Inicio ────────────────────────────────────────────────────────────────────
@@ -82,6 +85,9 @@ fun HomeScreen(
     }
     val totalSaved by AppSettings.totalSavedFlow.collectAsState()
     var showHelp by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+    LaunchedEffect(Unit) { updateInfo = UpdateChecker.check() }
 
     Box(Modifier.fillMaxSize().systemBarsPadding()) {
         Row(
@@ -102,6 +108,22 @@ fun HomeScreen(
                 text = { Text(stringResource(R.string.help_text)) },
                 confirmButton = {
                     TextButton(onClick = { showHelp = false }) { Text(stringResource(R.string.help_got_it)) }
+                }
+            )
+        }
+        updateInfo?.let { info ->
+            AlertDialog(
+                onDismissRequest = { updateInfo = null },
+                title = { Text(stringResource(R.string.update_available_title)) },
+                text = { Text(stringResource(R.string.update_available_text, info.versionName)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        UpdateChecker.downloadAndInstall(context, info)
+                        updateInfo = null
+                    }) { Text(stringResource(R.string.update_download)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { updateInfo = null }) { Text(stringResource(R.string.update_later)) }
                 }
             )
         }
