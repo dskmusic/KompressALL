@@ -33,12 +33,23 @@ android {
 
     signingConfigs {
         create("release") {
-            val storePath = System.getenv("KEYSTORE_FILE")
-            if (!storePath.isNullOrBlank()) {
-                storeFile = file(storePath)
+            val envStore = System.getenv("KEYSTORE_FILE")
+            val localKeystore = rootProject.file("dskmusic.keystore")
+            val localProps = rootProject.file("keystore.properties")
+            if (!envStore.isNullOrBlank()) {
+                // Usado por el Action de GitHub.
+                storeFile = file(envStore)
                 storePassword = System.getenv("KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("KEY_ALIAS")
                 keyPassword = System.getenv("KEY_PASSWORD")
+            } else if (localKeystore.exists() && localProps.exists()) {
+                // Firma local con la misma keystore, para poder instalar builds locales
+                // encima de las que vienen de una Release de GitHub sin conflicto de firma.
+                val props = Properties().apply { load(FileInputStream(localProps)) }
+                storeFile = localKeystore
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
             }
         }
     }
@@ -46,7 +57,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            if (!System.getenv("KEYSTORE_FILE").isNullOrBlank()) {
+            if (signingConfigs.getByName("release").storeFile != null) {
                 signingConfig = signingConfigs.getByName("release")
             }
             proguardFiles(

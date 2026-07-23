@@ -37,6 +37,7 @@ captures/
 *.jks
 *.keystore
 key.properties
+keystore.properties
 
 # Build outputs
 *.apk
