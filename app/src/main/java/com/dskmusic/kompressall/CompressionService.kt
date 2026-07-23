@@ -26,7 +26,9 @@ import kotlinx.coroutines.launch
 class CompressionService : Service() {
 
     companion object {
-        const val CHANNEL_ID = "kompressall_progress"
+        // v2: Android ignora los cambios de importancia en un canal ya creado, así que
+        // se cambia el id para forzar uno nuevo con IMPORTANCE_DEFAULT (ver App.kt).
+        const val CHANNEL_ID = "kompressall_progress_v2"
         const val DONE_CHANNEL_ID = "kompressall_done"
         private const val NOTIF_ID = 1
         private const val DONE_ID = 2

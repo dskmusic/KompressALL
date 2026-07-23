@@ -10,12 +10,15 @@ class App : Application() {
         super.onCreate()
         Settings.init(this)
         val notificationManager = getSystemService(NotificationManager::class.java)
-        // Canal de progreso: silencioso, se actualiza muchas veces por segundo.
+        // Canal de progreso: importancia normal (no LOW) para que el sistema no lo
+        // trate como "silencioso" y lo oculte en la pantalla de bloqueo cuando esa
+        // opción está activada; el silencio real de cada actualización lo controla
+        // setSilent()/setOnlyAlertOnce() en la propia notificación, no el canal.
         notificationManager.createNotificationChannel(
             NotificationChannel(
                 CompressionService.CHANNEL_ID,
                 getString(R.string.notif_channel_name),
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_DEFAULT
             )
         )
         // Canal de "terminado": importancia alta para que suene y vibre con el
