@@ -75,14 +75,25 @@ fun ConfigScreen(
 
     // Estimación heurística del tamaño final del lote
     val estimate = remember(cfg, state.items) {
-        val (q, s) = when (cfg.imagePreset) {
-            Preset.HIGH -> 95 to 1f
-            Preset.MEDIUM -> 75 to 0.8f
-            Preset.LOW -> 45 to 0.5f
-            Preset.MANUAL -> cfg.imageQuality to cfg.imageResolutionPct / 100f
+        val (q, s, format) = when (cfg.imagePreset) {
+            Preset.HIGH -> Triple(95, 1f, "jpeg")
+            Preset.MEDIUM -> Triple(75, 0.8f, "jpeg")
+            Preset.LOW -> Triple(45, 0.5f, "jpeg")
+            Preset.MANUAL -> Triple(cfg.imageQuality, cfg.imageResolutionPct / 100f, cfg.imageFormat)
         }
-        val resFactor = if (s >= 0.999f) 1f else s * s * 0.9f
-        val imgFactor = (q / 100f * 0.85f * resFactor).coerceIn(0.02f, 0.98f)
+        val resFactor = if (s >= 0.999f) 1f else s * s
+        // La curva calidad->tamaño de JPEG/WEBP no es lineal: por encima de ~85 apenas
+        // se gana nada, por debajo de ~50 el tamaño cae muy rápido. PNG ignora la
+        // calidad (es sin pérdida), así que ahí solo influye el cambio de resolución.
+        val qualityFactor = when {
+            format == "png" -> 1f
+            q >= 95 -> 0.85f + (q - 95) * 0.03f
+            q >= 80 -> 0.35f + (q - 80) * (0.50f / 15f)
+            q >= 50 -> 0.12f + (q - 50) * (0.23f / 30f)
+            else -> 0.04f + (q - 5).coerceAtLeast(0) * (0.08f / 45f)
+        }
+        val formatFactor = if (format == "webp") 0.75f else 1f
+        val imgFactor = (qualityFactor * formatFactor * resFactor).coerceIn(0.02f, 1.2f)
         val vidFraction = when (cfg.videoPreset) {
             Preset.HIGH -> 0.40f; Preset.MEDIUM -> 0.18f; Preset.LOW -> 0.08f
             Preset.MANUAL -> cfg.videoSizePct / 100f

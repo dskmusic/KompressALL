@@ -103,12 +103,9 @@ object NotificationSounds {
     }
 
     /** Crea (si hace falta) el canal de "terminado" para la combinación actual de
-     *  sonido+vibración. Devuelve un texto de diagnóstico: si la Uri se escribió bien
-     *  en MediaStore y si el canal, ya releído del sistema, realmente se quedó con
-     *  ese sonido. */
-    fun rebuildDoneChannel(context: Context): String {
-        val manager = context.getSystemService(NotificationManager::class.java)
-            ?: return "sin NotificationManager"
+     *  sonido+vibración. */
+    fun rebuildDoneChannel(context: Context) {
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
         val id = doneChannelId()
         val uri = registerInMediaStore(context, Settings.notificationSound)
         val pattern = vibrationPatternFor(Settings.notificationVibration)
@@ -136,14 +133,6 @@ object NotificationSounds {
                 }
             }
             manager.createNotificationChannel(channel)
-        }
-        val applied = manager.getNotificationChannel(id)
-        return when {
-            uri == null -> "registro en MediaStore falló (revisa permisos de almacenamiento)"
-            applied == null -> "el canal no existe tras crearlo"
-            applied.sound == null -> "el sistema descartó el sonido: el canal se quedó sin sonido"
-            applied.sound != uri -> "el sistema aplicó otra uri: ${applied.sound}"
-            else -> "OK, el canal tiene: $uri"
         }
     }
 
