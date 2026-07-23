@@ -53,6 +53,7 @@
 
     <!-- Sonido / vibración de notificación -->
     <string name="compression_rules">Reglas de compresión</string>
+    <string name="reset_defaults">Restablecer valores predeterminados</string>
     <string name="min_size_desc">Los archivos por debajo de este tamaño se dejan tal cual (no se comprimen).</string>
     <string name="min_size_off">Tamaño mínimo: desactivado (comprime siempre)</string>
     <string name="min_size_fmt">Tamaño mínimo: %1$.1f MB</string>

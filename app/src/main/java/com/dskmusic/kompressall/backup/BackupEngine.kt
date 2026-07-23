@@ -43,10 +43,18 @@ object BackupEngine {
             val results = mutableListOf<BackupDestResult>()
             var fileCounter = 0
             var bytesDoneBase = 0L
+            var lastUpdateTime = 0L
 
-            fun onFileProgress(transferred: Long) {
+            // Como mucho 2 actualizaciones por segundo: subiendo en local/rápido esto se
+            // llama por cada trozo de 64 KB (cientos de veces por segundo), y Android
+            // descarta las actualizaciones de una notificación si van demasiado seguidas
+            // dejándola parada en la práctica. Siempre se deja pasar el último trozo.
+            fun onFileProgress(transferred: Long, total: Long) {
+                val now = System.currentTimeMillis()
+                if (now - lastUpdateTime < 400 && transferred < total) return
+                lastUpdateTime = now
                 val overallDone = bytesDoneBase + transferred
-                val elapsedSec = ((System.currentTimeMillis() - startTime) / 1000.0).coerceAtLeast(0.5)
+                val elapsedSec = ((now - startTime) / 1000.0).coerceAtLeast(0.5)
                 _state.update {
                     it.copy(overallBytesDone = overallDone, speedBytesPerSec = overallDone / elapsedSec)
                 }
@@ -74,7 +82,7 @@ object BackupEngine {
                         val file = File(path)
                         _state.update { it.copy(currentFileIndex = fileCounter, currentFileName = file.name) }
                         try {
-                            session.upload(file, baseDir) { transferred, _ -> onFileProgress(transferred) }
+                            session.upload(file, baseDir) { transferred, total -> onFileProgress(transferred, total) }
                         } catch (e: Exception) {
                             ok = false; lastError = e.message
                         }
@@ -88,7 +96,7 @@ object BackupEngine {
                             val file = File(path)
                             _state.update { it.copy(currentFileIndex = fileCounter, currentFileName = file.name) }
                             try {
-                                session.upload(file, videosDir) { transferred, _ -> onFileProgress(transferred) }
+                                session.upload(file, videosDir) { transferred, total -> onFileProgress(transferred, total) }
                             } catch (e: Exception) {
                                 ok = false; lastError = e.message
                             }

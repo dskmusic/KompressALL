@@ -51,6 +51,9 @@ import com.dskmusic.kompressall.model.JobConfig
 import com.dskmusic.kompressall.model.Preset
 import com.dskmusic.kompressall.model.formatSize
 
+/** Valores de fábrica del modo manual, para el botón "Restablecer predeterminados". */
+private val DEFAULT_CONFIG = JobConfig()
+
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun ConfigScreen(
@@ -171,6 +174,15 @@ fun ConfigScreen(
                         onValueChange = { update(cfg.copy(imageResolutionPct = it.toInt())) },
                         valueRange = 5f..100f
                     )
+                    TextButton(onClick = {
+                        update(
+                            cfg.copy(
+                                imageFormat = DEFAULT_CONFIG.imageFormat,
+                                imageQuality = DEFAULT_CONFIG.imageQuality,
+                                imageResolutionPct = DEFAULT_CONFIG.imageResolutionPct
+                            )
+                        )
+                    }) { Text(stringResource(R.string.reset_defaults)) }
                 }
             }
         }
@@ -222,6 +234,18 @@ fun ConfigScreen(
                         stringResource(R.string.two_pass_desc),
                         cfg.twoPass
                     ) { update(cfg.copy(twoPass = it)) }
+                    TextButton(onClick = {
+                        update(
+                            cfg.copy(
+                                videoCodec = DEFAULT_CONFIG.videoCodec,
+                                videoShortSide = DEFAULT_CONFIG.videoShortSide,
+                                videoFps = DEFAULT_CONFIG.videoFps,
+                                videoSizePct = DEFAULT_CONFIG.videoSizePct,
+                                audioKbps = DEFAULT_CONFIG.audioKbps,
+                                twoPass = DEFAULT_CONFIG.twoPass
+                            )
+                        )
+                    }) { Text(stringResource(R.string.reset_defaults)) }
                 }
             }
         }

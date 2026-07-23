@@ -50,6 +50,7 @@
 
     <!-- Notification sound / vibration -->
     <string name="compression_rules">Compression rules</string>
+    <string name="reset_defaults">Reset to defaults</string>
     <string name="min_size_desc">Files smaller than this are left as they are (not compressed).</string>
     <string name="min_size_off">Minimum size: off (compress everything)</string>
     <string name="min_size_fmt">Minimum size: %1$.1f MB</string>
