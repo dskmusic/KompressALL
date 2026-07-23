@@ -141,23 +141,6 @@ fun SettingsScreen(onBack: () -> Unit) {
             }
         }
 
-        SectionCard(title = stringResource(R.string.font)) {
-            val font by Settings.fontFlow.collectAsState()
-            val fontLabels = mapOf(
-                "default" to stringResource(R.string.font_default),
-                "sans" to stringResource(R.string.font_sans),
-                "serif" to stringResource(R.string.font_serif),
-                "monospace" to stringResource(R.string.font_monospace),
-                "cursive" to stringResource(R.string.font_cursive)
-            )
-            FONT_OPTIONS.forEach { key ->
-                RadioRow(
-                    title = fontLabels[key] ?: key,
-                    selected = font == key
-                ) { Settings.font = key }
-            }
-        }
-
         SectionCard(title = stringResource(R.string.accent_color)) {
             val accent by Settings.accentFlow.collectAsState()
             val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -191,6 +174,23 @@ fun SettingsScreen(onBack: () -> Unit) {
                         }
                     }
                 }
+            }
+        }
+
+        SectionCard(title = stringResource(R.string.font)) {
+            val font by Settings.fontFlow.collectAsState()
+            val fontLabels = mapOf(
+                "default" to stringResource(R.string.font_default),
+                "sans" to stringResource(R.string.font_sans),
+                "serif" to stringResource(R.string.font_serif),
+                "monospace" to stringResource(R.string.font_monospace),
+                "cursive" to stringResource(R.string.font_cursive)
+            )
+            FONT_OPTIONS.forEach { key ->
+                RadioRow(
+                    title = fontLabels[key] ?: key,
+                    selected = font == key
+                ) { Settings.font = key }
             }
         }
 
