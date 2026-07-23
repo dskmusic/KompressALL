@@ -166,6 +166,11 @@
     <string name="reset_stats">Reset saved-space counter</string>
     <string name="reset_stats_title">Reset saved-space counter?</string>
     <string name="reset_stats_text">This will permanently erase the total amount of space you have saved so far. This can\'t be undone.</string>
+    <string name="delete_empty_folders">Delete empty folders</string>
+    <string name="delete_empty_folders_title">Delete empty folders?</string>
+    <string name="delete_empty_folders_text">This permanently deletes every empty folder inside KompressALL (files are never touched). This can\'t be undone.</string>
+    <string name="delete_empty_folders_confirm">Delete empty folders</string>
+    <string name="delete_empty_folders_done">%1$d empty folder(s) deleted</string>
     <string name="about">About</string>
     <string name="version_fmt">Version %1$s</string>
 

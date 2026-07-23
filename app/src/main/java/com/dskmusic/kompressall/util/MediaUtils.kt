@@ -177,4 +177,17 @@ object MediaUtils {
         } catch (_: Exception) {
         }
     }
+
+    /** Borra recursivamente las subcarpetas vacías dentro de [root] (root en sí no se
+     *  borra). Devuelve cuántas carpetas se eliminaron. */
+    fun deleteEmptyDirs(root: File): Int {
+        var deleted = 0
+        root.listFiles()?.forEach { child ->
+            if (child.isDirectory) {
+                deleted += deleteEmptyDirs(child)
+                if (child.listFiles()?.isEmpty() == true && child.delete()) deleted++
+            }
+        }
+        return deleted
+    }
 }

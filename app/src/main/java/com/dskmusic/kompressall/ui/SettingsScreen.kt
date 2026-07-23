@@ -3,6 +3,7 @@ package com.dskmusic.kompressall.ui
 import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
+import android.os.Environment
 import android.os.PowerManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -59,7 +60,11 @@ import com.dskmusic.kompressall.backup.BackupDestination
 import com.dskmusic.kompressall.data.Settings
 import com.dskmusic.kompressall.update.UpdateChecker
 import com.dskmusic.kompressall.update.UpdateInfo
+import com.dskmusic.kompressall.util.MediaUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 fun applyLanguage(lang: String) {
     AppCompatDelegate.setApplicationLocales(
@@ -371,13 +376,52 @@ fun SettingsScreen(onBack: () -> Unit) {
                     title = { Text(stringResource(R.string.reset_stats_title)) },
                     text = { Text(stringResource(R.string.reset_stats_text)) },
                     confirmButton = {
-                        TextButton(onClick = {
-                            Settings.totalSaved = 0
-                            confirmReset = false
-                        }) { Text(stringResource(R.string.reset_stats)) }
+                        OutlinedButton(
+                            onClick = {
+                                Settings.totalSaved = 0
+                                confirmReset = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(stringResource(R.string.reset_stats), textAlign = TextAlign.Center) }
                     },
                     dismissButton = {
                         TextButton(onClick = { confirmReset = false }) { Text(stringResource(R.string.cancel)) }
+                    }
+                )
+            }
+
+            var confirmDeleteEmpty by remember { mutableStateOf(false) }
+            val emptyDirsScope = rememberCoroutineScope()
+            OutlinedButton(
+                onClick = { confirmDeleteEmpty = true },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text(stringResource(R.string.delete_empty_folders), textAlign = TextAlign.Center) }
+            if (confirmDeleteEmpty) {
+                AlertDialog(
+                    onDismissRequest = { confirmDeleteEmpty = false },
+                    title = { Text(stringResource(R.string.delete_empty_folders_title)) },
+                    text = { Text(stringResource(R.string.delete_empty_folders_text)) },
+                    confirmButton = {
+                        OutlinedButton(
+                            onClick = {
+                                confirmDeleteEmpty = false
+                                emptyDirsScope.launch(Dispatchers.IO) {
+                                    val root = File(Environment.getExternalStorageDirectory(), "KompressALL")
+                                    val count = MediaUtils.deleteEmptyDirs(root)
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.delete_empty_folders_done, count),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(stringResource(R.string.delete_empty_folders_confirm), textAlign = TextAlign.Center) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { confirmDeleteEmpty = false }) { Text(stringResource(R.string.cancel)) }
                     }
                 )
             }
