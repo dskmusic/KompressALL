@@ -17,6 +17,7 @@ object Settings {
 
     const val DSK_URL = "https://www.dskmusic.com/dsk_dev_redirect.php"
     const val DEFAULT_NOTIFICATION_SOUND = "sound_01"
+    val DEFAULT_MIN_SIZE_BYTES = (0.8 * 1024 * 1024).toLong()
     private const val KEY_TOTAL_SAVED = "total_saved_bytes"
 
     private lateinit var prefs: SharedPreferences
@@ -31,6 +32,7 @@ object Settings {
     val twoPassFlow = MutableStateFlow(false)
     val notificationSoundFlow = MutableStateFlow(DEFAULT_NOTIFICATION_SOUND)
     val notificationVibrationFlow = MutableStateFlow("default")
+    val minSizeToCompressBytesFlow = MutableStateFlow(DEFAULT_MIN_SIZE_BYTES)
 
     /** Lo fija App.kt: reconstruye el canal de notificación "terminado" con el
      *  sonido/vibración actuales (Android no permite cambiarlos en un canal ya creado). */
@@ -55,6 +57,7 @@ object Settings {
         twoPassFlow.value = twoPass
         notificationSoundFlow.value = notificationSound
         notificationVibrationFlow.value = notificationVibration
+        minSizeToCompressBytesFlow.value = minSizeToCompressBytes
     }
 
     /** Color de fondo para el tema "custom" (ARGB). Gris neutro por defecto. */
@@ -90,6 +93,15 @@ object Settings {
             prefs.edit().putString("notification_vibration", value).apply()
             notificationVibrationFlow.value = value
             onNotificationSettingsChanged?.invoke()
+        }
+
+    /** Los archivos por debajo de este tamaño no se comprimen, se conservan tal cual.
+     *  0 = desactivado (comprime siempre). */
+    var minSizeToCompressBytes: Long
+        get() = prefs.getLong("min_size_to_compress_bytes", DEFAULT_MIN_SIZE_BYTES)
+        set(value) {
+            prefs.edit().putLong("min_size_to_compress_bytes", value).apply()
+            minSizeToCompressBytesFlow.value = value
         }
 
     /** Destinos de respaldo por SFTP (sin contraseña, ver destinationPassword). */
@@ -255,6 +267,7 @@ object Settings {
             twoPassFlow.value = twoPass
             notificationSoundFlow.value = notificationSound
             notificationVibrationFlow.value = notificationVibration
+        minSizeToCompressBytesFlow.value = minSizeToCompressBytes
             onNotificationSettingsChanged?.invoke()
             true
         } catch (_: Exception) {

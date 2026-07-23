@@ -29,12 +29,28 @@ object BackupEngine {
         if (_state.value.running) return
         val appCtx = context.applicationContext
         val totalPerDest = backupJob.photoPaths.size + backupJob.videoPaths.size
-        _state.value = BackupState(running = true, totalFiles = totalPerDest * backupJob.destinations.size)
+        val bytesPerDest = (backupJob.photoPaths + backupJob.videoPaths).sumOf { File(it).length() }
+        val overallTotalBytes = bytesPerDest * backupJob.destinations.size
+        val startTime = System.currentTimeMillis()
+        _state.value = BackupState(
+            running = true,
+            totalFiles = totalPerDest * backupJob.destinations.size,
+            overallBytesTotal = overallTotalBytes
+        )
         BackupService.start(appCtx)
 
         job = scope.launch {
             val results = mutableListOf<BackupDestResult>()
             var fileCounter = 0
+            var bytesDoneBase = 0L
+
+            fun onFileProgress(transferred: Long) {
+                val overallDone = bytesDoneBase + transferred
+                val elapsedSec = ((System.currentTimeMillis() - startTime) / 1000.0).coerceAtLeast(0.5)
+                _state.update {
+                    it.copy(overallBytesDone = overallDone, speedBytesPerSec = overallDone / elapsedSec)
+                }
+            }
 
             for (dest in backupJob.destinations) {
                 _state.update { it.copy(currentDestination = dest.name) }
@@ -43,6 +59,7 @@ object BackupEngine {
                 if (sessionResult.isFailure) {
                     results += BackupDestResult(dest.name, false, sessionResult.exceptionOrNull()?.message)
                     fileCounter += totalPerDest
+                    bytesDoneBase += bytesPerDest
                     continue
                 }
                 val session = sessionResult.getOrThrow()
@@ -57,10 +74,11 @@ object BackupEngine {
                         val file = File(path)
                         _state.update { it.copy(currentFileIndex = fileCounter, currentFileName = file.name) }
                         try {
-                            session.upload(file, baseDir)
+                            session.upload(file, baseDir) { transferred, _ -> onFileProgress(transferred) }
                         } catch (e: Exception) {
                             ok = false; lastError = e.message
                         }
+                        bytesDoneBase += file.length()
                     }
                     if (backupJob.videoPaths.isNotEmpty()) {
                         val videosDir = "$baseDir/Videos"
@@ -70,10 +88,11 @@ object BackupEngine {
                             val file = File(path)
                             _state.update { it.copy(currentFileIndex = fileCounter, currentFileName = file.name) }
                             try {
-                                session.upload(file, videosDir)
+                                session.upload(file, videosDir) { transferred, _ -> onFileProgress(transferred) }
                             } catch (e: Exception) {
                                 ok = false; lastError = e.message
                             }
+                            bytesDoneBase += file.length()
                         }
                     }
                     results += BackupDestResult(dest.name, ok, lastError)

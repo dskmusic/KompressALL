@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">KompressALL</string>
+    <string name="loading_files">Loading…</string>
     <string name="shortcut_pick_short">Select media</string>
     <string name="shortcut_pick_long">Select photos and videos</string>
     <string name="footer_made_with">Made with ❤️ by</string>
@@ -48,6 +49,10 @@
     <string name="font_preview_word">Preview</string>
 
     <!-- Notification sound / vibration -->
+    <string name="compression_rules">Compression rules</string>
+    <string name="min_size_desc">Files smaller than this are left as they are (not compressed).</string>
+    <string name="min_size_off">Minimum size: off (compress everything)</string>
+    <string name="min_size_fmt">Minimum size: %1$.1f MB</string>
     <string name="notif_sound_label">Sound</string>
     <string name="notif_sound_item">Sound %1$d</string>
     <string name="notif_sound_reset">Reset to default sound</string>
@@ -136,7 +141,6 @@
     <!-- Progress -->
     <string name="compressing_title">Compressing…</string>
     <string name="file_x_of_y">File %1$d of %2$d</string>
-    <string name="eta_fmt">About %1$s left</string>
     <string name="pending_job_title">Unfinished job found</string>
     <string name="pending_job_text">KompressALL closed unexpectedly with %1$d file(s) still pending. Continue where it left off?</string>
     <string name="pending_job_resume">Continue</string>

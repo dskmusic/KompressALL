@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import com.dskmusic.kompressall.backup.BackupEngine
+import com.dskmusic.kompressall.model.formatSize
 import com.dskmusic.kompressall.notif.NotificationSounds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -65,7 +66,10 @@ class BackupService : Service() {
                 } else if (state.running) {
                     notifySafe(
                         NOTIF_ID,
-                        buildProgress(state.currentFileIndex, state.totalFiles, state.currentDestination, state.currentFileName)
+                        buildProgress(
+                            state.currentFileIndex, state.totalFiles, state.currentDestination, state.currentFileName,
+                            state.overallBytesDone, state.overallBytesTotal, state.speedBytesPerSec
+                        )
                     )
                 }
             }
@@ -74,13 +78,25 @@ class BackupService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_NOT_STICKY
 
-    private fun buildProgress(current: Int, total: Int, destination: String, name: String): Notification {
-        val pct = if (total > 0) (current * 100 / total) else 0
+    private fun buildProgress(
+        current: Int, total: Int, destination: String, name: String,
+        bytesDone: Long, bytesTotal: Long, speedBps: Double
+    ): Notification {
+        val pct = if (bytesTotal > 0) (bytesDone * 100 / bytesTotal).toInt() else 0
+        val detail = if (bytesTotal > 0 && speedBps > 0) {
+            val speedText = formatSize(speedBps.toLong()) + "/s"
+            val remainingBytes = (bytesTotal - bytesDone).coerceAtLeast(0)
+            val etaSec = (remainingBytes / speedBps).toLong()
+            val etaText = if (etaSec >= 60) "${etaSec / 60}m ${etaSec % 60}s" else "${etaSec}s"
+            "$name · $speedText · $etaText"
+        } else {
+            name
+        }
         return NotificationCompat.Builder(this, CompressionService.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notif)
             .setContentTitle("${getString(R.string.backup_notif_title, destination)} (${getString(R.string.file_x_of_y, current, total)})")
-            .setContentText(name)
-            .setProgress(100, pct, current <= 0)
+            .setContentText(detail)
+            .setProgress(100, pct, bytesTotal <= 0)
             .setOngoing(true)
             .setSilent(true)
             .setOnlyAlertOnce(true)

@@ -18,6 +18,9 @@ data class BackupState(
     val currentFileIndex: Int = 0,
     val totalFiles: Int = 0,
     val currentFileName: String = "",
+    val overallBytesDone: Long = 0,
+    val overallBytesTotal: Long = 0,
+    val speedBytesPerSec: Double = 0.0,
     val done: Boolean = false,
     val results: List<BackupDestResult> = emptyList()
 )

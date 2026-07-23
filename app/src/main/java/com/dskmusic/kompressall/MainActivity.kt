@@ -12,8 +12,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -24,9 +29,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.content.IntentCompat
 import com.dskmusic.kompressall.data.Settings
 import com.dskmusic.kompressall.engine.CompressionEngine
@@ -144,6 +152,7 @@ private fun Root(onPick: () -> Unit, onAddMore: () -> Unit, onRequestAccess: () 
     val context = LocalContext.current
     val state by CompressionEngine.state.collectAsState()
     val pendingExternal by CompressionEngine.pendingExternal.collectAsState()
+    val isLoading by CompressionEngine.isLoading.collectAsState()
     var showSettings by rememberSaveable { mutableStateOf(false) }
 
     BackHandler(enabled = showSettings || state.phase == Phase.CONFIG) {
@@ -183,5 +192,17 @@ private fun Root(onPick: () -> Unit, onAddMore: () -> Unit, onRequestAccess: () 
             onSettings = { showSettings = true },
             onRequestAccess = onRequestAccess
         )
+    }
+
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CircularProgressIndicator(color = Color.White)
+                Text(stringResource(R.string.loading_files), color = Color.White)
+            }
+        }
     }
 }

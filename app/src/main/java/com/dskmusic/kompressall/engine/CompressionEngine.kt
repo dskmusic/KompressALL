@@ -48,10 +48,19 @@ object CompressionEngine {
      *  lote pendiente: la UI pregunta si añadirlos o empezar de nuevo. */
     val pendingExternal = MutableStateFlow<List<Uri>?>(null)
 
+    /** True mientras se resuelven los archivos recibidos (nombre, tamaño, ruta real...);
+     *  con lotes grandes puede tardar un poco, la UI muestra un overlay de carga. */
+    val isLoading = MutableStateFlow(false)
+
     fun load(context: Context, uris: List<Uri>, append: Boolean = false) {
         val appCtx = context.applicationContext
+        isLoading.value = true
         scope.launch {
-            val newItems = uris.mapNotNull { MediaUtils.loadEntry(appCtx, it) }
+            val newItems = try {
+                uris.mapNotNull { MediaUtils.loadEntry(appCtx, it) }
+            } finally {
+                isLoading.value = false
+            }
             if (newItems.isEmpty()) return@launch
             val current = _state.value
             val merging = append && current.phase == Phase.CONFIG
@@ -184,6 +193,10 @@ object CompressionEngine {
     private fun processImage(
         ctx: Context, item: MediaEntry, cfg: JobConfig, destDir: File, backupDir: File
     ): ItemResult {
+        val minSize = Settings.minSizeToCompressBytes
+        if (minSize > 0 && item.size < minSize) {
+            return finishImage(ctx, item, cfg, destDir, backupDir, kept = true, outName = item.name, bytes = null)
+        }
         val (format, quality, scale) = when (cfg.imagePreset) {
             Preset.HIGH   -> Triple("jpeg", 95, 1f)
             Preset.MEDIUM -> Triple("jpeg", 75, 0.8f)
@@ -199,6 +212,13 @@ object CompressionEngine {
         val ext = if (kept) item.name.substringAfterLast('.', "jpg").lowercase()
         else if (format == "jpeg") "jpg" else format
         val outName = "$base.$ext"
+        return finishImage(ctx, item, cfg, destDir, backupDir, kept, outName, if (kept) null else bytes)
+    }
+
+    private fun finishImage(
+        ctx: Context, item: MediaEntry, cfg: JobConfig, destDir: File, backupDir: File,
+        kept: Boolean, outName: String, bytes: ByteArray?
+    ): ItemResult {
         val touched = mutableListOf<String>()
         val out: File
 
@@ -214,7 +234,7 @@ object CompressionEngine {
                 touched += backup.absolutePath
             }
             out = File(orig.parentFile ?: destDir, outName)
-            if (kept) copyOriginal(ctx, item, out) else out.writeBytes(bytes)
+            if (kept) copyOriginal(ctx, item, out) else out.writeBytes(bytes!!)
             if (!out.absolutePath.equals(orig.absolutePath, ignoreCase = true) && orig.exists()) {
                 orig.delete()
                 touched += orig.absolutePath
@@ -222,7 +242,7 @@ object CompressionEngine {
         } else {
             destDir.mkdirs()
             out = MediaUtils.uniqueFile(destDir, outName)
-            if (kept) copyOriginal(ctx, item, out) else out.writeBytes(bytes)
+            if (kept) copyOriginal(ctx, item, out) else out.writeBytes(bytes!!)
             deleteOriginalIfWanted(cfg, item, out, touched)
         }
         if (item.dateMillis > 0) out.setLastModified(item.dateMillis)
@@ -237,6 +257,10 @@ object CompressionEngine {
         ctx: Context, item: MediaEntry, cfg: JobConfig,
         destDir: File, videosDir: File, backupDir: File
     ): ItemResult {
+        val minSize = Settings.minSizeToCompressBytes
+        if (minSize > 0 && item.size < minSize) {
+            return finishKeptVideo(ctx, item, cfg, videosDir)
+        }
         val meta = VideoCompressor.readMeta(ctx, item.sourceUri())
             ?: return ItemResult(item.name, true, item.size, 0, false, error = "metadata")
 
@@ -397,6 +421,22 @@ object CompressionEngine {
         } finally {
             cache.delete()
         }
+    }
+
+    /** Vídeo por debajo del tamaño mínimo a comprimir: se conserva tal cual. */
+    private fun finishKeptVideo(ctx: Context, item: MediaEntry, cfg: JobConfig, videosDir: File): ItemResult {
+        if (cfg.replaceOriginals && item.realPath != null) {
+            return ItemResult(item.name, true, item.size, item.size, true, keptOriginal = true, outputPath = item.realPath)
+        }
+        val touched = mutableListOf<String>()
+        videosDir.mkdirs()
+        val out = MediaUtils.uniqueFile(videosDir, item.name)
+        copyOriginal(ctx, item, out)
+        deleteOriginalIfWanted(cfg, item, out, touched)
+        if (item.dateMillis > 0) out.setLastModified(item.dateMillis)
+        touched += out.absolutePath
+        MediaUtils.scan(ctx, touched)
+        return ItemResult(item.name, true, item.size, out.length(), true, keptOriginal = true, outputPath = out.absolutePath)
     }
 
     // ── Auxiliares ────────────────────────────────────────────────────────────

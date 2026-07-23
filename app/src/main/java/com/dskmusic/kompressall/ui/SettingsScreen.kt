@@ -283,6 +283,26 @@ fun SettingsScreen(onBack: () -> Unit) {
             ) { Settings.twoPass = it }
         }
 
+        SectionCard(title = stringResource(R.string.compression_rules)) {
+            val minSizeBytes by Settings.minSizeToCompressBytesFlow.collectAsState()
+            val minSizeMb = minSizeBytes / (1024f * 1024f)
+            Text(
+                if (minSizeMb <= 0.001f) stringResource(R.string.min_size_off)
+                else stringResource(R.string.min_size_fmt, minSizeMb),
+                style = MaterialTheme.typography.labelLarge
+            )
+            Text(
+                stringResource(R.string.min_size_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Slider(
+                value = minSizeMb,
+                onValueChange = { Settings.minSizeToCompressBytes = (it * 1024 * 1024).toLong() },
+                valueRange = 0f..5f
+            )
+        }
+
         SectionCard(title = stringResource(R.string.notifications)) {
             Text(
                 stringResource(R.string.dnd_desc),

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="loading_files">Cargando…</string>
     <string name="footer_made_with">Made with ❤️ by</string>
     <string name="shortcut_pick_short">Elegir medios</string>
     <string name="shortcut_pick_long">Seleccionar fotos y vídeos</string>
@@ -51,6 +52,10 @@
     <string name="font_preview_word">Vista previa</string>
 
     <!-- Sonido / vibración de notificación -->
+    <string name="compression_rules">Reglas de compresión</string>
+    <string name="min_size_desc">Los archivos por debajo de este tamaño se dejan tal cual (no se comprimen).</string>
+    <string name="min_size_off">Tamaño mínimo: desactivado (comprime siempre)</string>
+    <string name="min_size_fmt">Tamaño mínimo: %1$.1f MB</string>
     <string name="notif_sound_label">Sonido</string>
     <string name="notif_sound_item">Sonido %1$d</string>
     <string name="notif_sound_reset">Restablecer sonido por defecto</string>
@@ -139,7 +144,6 @@
     <!-- Progress -->
     <string name="compressing_title">Comprimiendo…</string>
     <string name="file_x_of_y">Archivo %1$d de %2$d</string>
-    <string name="eta_fmt">Quedan unos %1$s</string>
     <string name="pending_job_title">Trabajo sin terminar</string>
     <string name="pending_job_text">KompressALL se cerró antes de tiempo con %1$d archivo(s) aún pendientes. ¿Continuar donde se quedó?</string>
     <string name="pending_job_resume">Continuar</string>

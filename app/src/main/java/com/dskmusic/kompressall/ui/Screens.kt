@@ -37,7 +37,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
@@ -70,7 +69,6 @@ import com.dskmusic.kompressall.model.ItemResult
 import com.dskmusic.kompressall.model.formatSize
 import com.dskmusic.kompressall.update.UpdateChecker
 import com.dskmusic.kompressall.update.UpdateInfo
-import kotlinx.coroutines.delay
 import java.io.File
 
 private data class PendingBackup(
@@ -239,23 +237,6 @@ fun HomeScreen(
 
 @Composable
 fun ProgressScreen(state: EngineState, onCancel: () -> Unit) {
-    val startTime = remember { System.currentTimeMillis() }
-    val now by produceState(System.currentTimeMillis()) {
-        while (true) {
-            value = System.currentTimeMillis()
-            delay(1000)
-        }
-    }
-    val progress = state.overallProgress
-    val etaText = if (progress > 0.02f) {
-        val elapsed = now - startTime
-        val remainingMs = (elapsed.toDouble() / progress * (1 - progress)).toLong().coerceAtLeast(0)
-        val totalSec = remainingMs / 1000
-        val m = totalSec / 60
-        val s = totalSec % 60
-        if (m > 0) "%d:%02d".format(m, s) else "${s}s"
-    } else null
-
     Column(
         modifier = Modifier.fillMaxSize().systemBarsPadding().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -273,13 +254,6 @@ fun ProgressScreen(state: EngineState, onCancel: () -> Unit) {
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold
         )
-        if (etaText != null) {
-            Text(
-                stringResource(R.string.eta_fmt, etaText),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
         Spacer(Modifier.height(16.dp))
         LinearProgressIndicator(
             progress = { state.overallProgress },

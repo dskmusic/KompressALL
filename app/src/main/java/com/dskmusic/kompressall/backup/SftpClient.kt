@@ -3,13 +3,14 @@ package com.dskmusic.kompressall.backup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.schmizz.sshj.SSHClient
+import net.schmizz.sshj.sftp.OpenMode
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
-import net.schmizz.sshj.xfer.FileSystemFile
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.io.Closeable
 import java.io.File
 import java.security.Security
+import java.util.EnumSet
 
 data class RemoteDir(val name: String, val path: String)
 
@@ -25,9 +26,27 @@ class SftpSession private constructor(private val ssh: SSHClient, private val sf
         if (path.isNotBlank()) sftp.mkdirs(path)
     }
 
-    fun upload(localFile: File, remoteDir: String) {
+    /** Sube el archivo a golpes de 64 KB, avisando del progreso por bytes (para poder
+     *  calcular velocidad/ETA en la UI) en vez de usar el put() de alto nivel de sshj,
+     *  que no expone eso de forma sencilla. */
+    fun upload(localFile: File, remoteDir: String, onProgress: (transferred: Long, total: Long) -> Unit = { _, _ -> }) {
         mkdirs(remoteDir)
-        sftp.put(FileSystemFile(localFile), "$remoteDir/${localFile.name}")
+        val total = localFile.length()
+        sftp.open("$remoteDir/${localFile.name}", EnumSet.of(OpenMode.WRITE, OpenMode.CREAT, OpenMode.TRUNC)).use { remoteFile ->
+            remoteFile.RemoteFileOutputStream().use { out ->
+                localFile.inputStream().use { input ->
+                    val buffer = ByteArray(64 * 1024)
+                    var transferred = 0L
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read == -1) break
+                        out.write(buffer, 0, read)
+                        transferred += read
+                        onProgress(transferred, total)
+                    }
+                }
+            }
+        }
     }
 
     fun listDirs(path: String): List<RemoteDir> {
