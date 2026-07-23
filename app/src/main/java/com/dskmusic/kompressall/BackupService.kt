@@ -41,7 +41,7 @@ class BackupService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        startForeground(NOTIF_ID, buildProgress(0, 1, "", getString(R.string.notif_preparing)))
+        startForeground(NOTIF_ID, buildProgress(0, 1, "", getString(R.string.notif_preparing), 0, 0, 0.0))
         wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "KompressALL:backup")
             .apply { acquire(4 * 60 * 60 * 1000L) }
