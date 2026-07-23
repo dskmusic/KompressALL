@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "K" con flechas de compresión hacia el centro -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group>
+        <!-- Barra vertical de la K -->
+        <path
+            android:fillColor="#7FD8BE"
+            android:pathData="M38,32 h8 v44 h-8 z" />
+        <!-- Diagonales de la K -->
+        <path
+            android:fillColor="#7FD8BE"
+            android:pathData="M48,54 L64,32 L73,32 L56,55.5 L73,76 L64,76 Z" />
+        <!-- Flechas de compresión (izquierda y derecha apuntando al centro) -->
+        <path
+            android:fillColor="#5B8DEF"
+            android:pathData="M24,48 L32,54 L24,60 Z" />
+        <path
+            android:fillColor="#5B8DEF"
+            android:pathData="M84,48 L76,54 L84,60 Z" />
+    </group>
+</vector>

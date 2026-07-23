@@ -1,0 +1,53 @@
+# Claude Code / tooling
+.tokensave
+.claude/
+
+.backups
+CREAR BACKUP.pyw
+dskmusic.keystore
+dskmusic.keystore_b64.txt
+subir_cambios.bat
+ToDo.rtf
+
+# Gradle
+.gradle/
+/build/
+/app/build/
+/*/build/
+
+# Local configuration (machine-specific, never commit)
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+.navigation/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Kotlin / KSP / Compose compiler daemons
+.kotlin/
+
+# Keystores and signing (never commit real keys)
+*.jks
+*.keystore
+key.properties
+
+# Build outputs
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# Logs & crash reports
+*.log
+*.hprof
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini

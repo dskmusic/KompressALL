@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Acceso directo (mantener pulsado el icono): salta la portada y abre
+         el selector de fotos/vídeos directamente. -->
+    <shortcut
+        android:shortcutId="pick_media"
+        android:enabled="true"
+        android:icon="@drawable/ic_notif"
+        android:shortcutShortLabel="@string/shortcut_pick_short"
+        android:shortcutLongLabel="@string/shortcut_pick_long">
+        <intent
+            android:action="com.dskmusic.kompressall.PICK_MEDIA"
+            android:targetPackage="com.dskmusic.kompressall"
+            android:targetClass="com.dskmusic.kompressall.MainActivity">
+            <extra android:name="open_picker" android:value="true" />
+        </intent>
+    </shortcut>
+</shortcuts>

@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">KompressALL</string>
+    <string name="shortcut_pick_short">Select media</string>
+    <string name="shortcut_pick_long">Select photos and videos</string>
+    <string name="footer_made_with">Made with ❤️ by</string>
+    <string name="footer_dsk" translatable="false">DSK</string>
+
+    <!-- Home -->
+    <string name="home_tagline">Compress your photos and videos</string>
+    <string name="select_media">Select photos and videos</string>
+    <string name="add_more">+ Add more</string>
+    <string name="incoming_batch_title">New files received</string>
+    <string name="incoming_batch_text">You already have files pending. Do you want to add these to the current batch or start a new one?</string>
+    <string name="incoming_add_to_batch">Add to batch</string>
+    <string name="incoming_new_batch">New batch</string>
+    <string name="total_saved_fmt">You have saved %1$s with KompressALL</string>
+    <string name="grant_access_title">Storage access required</string>
+    <string name="grant_access_text">KompressALL needs \"All files access\" to create the KompressALL folder at the root of your storage and to replace or delete originals. Nothing ever leaves your device.</string>
+    <string name="grant_access_button">Grant access</string>
+    <string name="settings">Settings</string>
+    <string name="help">Help</string>
+    <string name="help_title">How KompressALL works</string>
+    <string name="help_text">1. Pick photos and videos, or share/open them into the app from your camera or gallery.\n\n2. Choose a preset — High, Medium (recommended) or Max saving — for photos and for videos, or tweak everything manually with the + option.\n\n3. Pick where to save: a new dated folder, or replace the originals in place (with an optional backup).\n\n4. Tap Compress. You can minimize the app — a notification keeps you posted and lets you cancel anytime.\n\n5. Check the before/after summary and share the results straight from there if you like.</string>
+    <string name="help_got_it">Got it</string>
+
+    <!-- Config -->
+    <string name="batch_summary">%1$d photos · %2$d videos · %3$s</string>
+    <string name="images_section">Photos</string>
+    <string name="videos_section">Videos</string>
+    <string name="preset_high">High</string>
+    <string name="preset_medium">Medium</string>
+    <string name="preset_low">Max saving</string>
+    <string name="preset_manual">Manual</string>
+    <string name="quality_fmt">Quality: %1$d</string>
+    <string name="resolution_pct_fmt">Resolution: %1$d%%</string>
+    <string name="format_label">Format</string>
+    <string name="codec_label">Codec</string>
+    <string name="codec_auto">Auto</string>
+    <string name="resolution_label">Resolution</string>
+    <string name="original_label">Original</string>
+    <string name="fps_label">FPS</string>
+    <string name="target_pct_fmt">Target size: %1$d%% of original</string>
+    <string name="audio_label">Audio</string>
+    <string name="estimated_size_fmt">Estimated final size: ~%1$s</string>
+    <string name="destination">Destination</string>
+    <string name="dest_new_folder">New folder</string>
+    <string name="dest_new_folder_desc">Saves to KompressALL/, videos in a Videos/ subfolder</string>
+    <string name="folder_name_label">Folder name</string>
+    <string name="folder_name_hint">e.g. 20270723 Beach day</string>
+    <string name="dest_replace">Replace originals</string>
+    <string name="dest_replace_desc">Overwrites the original files with the compressed ones</string>
+    <string name="backup_originals">Back up originals</string>
+    <string name="backup_desc">Copies originals to KompressALL/Backups/ before replacing</string>
+    <string name="delete_originals">Delete originals</string>
+    <string name="delete_desc">Deletes the original files after compressing</string>
+    <string name="delete_warning_title">This can\'t be undone</string>
+    <string name="delete_warning_text">Originals will be permanently deleted after compressing (unless you also enable a backup). Are you sure you want to enable this?</string>
+    <string name="delete_warning_confirm">Yes, enable</string>
+    <string name="start_compression">Compress</string>
+    <string name="clear_selection">Discard</string>
+
+    <!-- Progress -->
+    <string name="compressing_title">Compressing…</string>
+    <string name="file_x_of_y">File %1$d of %2$d</string>
+    <string name="cancel">Cancel</string>
+    <string name="probe_pass">Analysis pass (2-pass mode)</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel_name">Compression progress</string>
+    <string name="notif_done_channel_name">Compression finished</string>
+    <string name="notif_preparing">Preparing…</string>
+    <string name="notif_done_title">Compression finished</string>
+    <string name="notif_done_text">%1$d files · %2$s saved</string>
+
+    <!-- Result -->
+    <string name="result_title">Done!</string>
+    <string name="result_cancelled">Cancelled</string>
+    <string name="original_total">Original: %1$s</string>
+    <string name="final_total">Final: %1$s</string>
+    <string name="saved_total">Saved: %1$s (%2$d%%)</string>
+    <string name="done_button">Done</string>
+    <string name="share_results">Share</string>
+    <string name="item_failed">Failed</string>
+    <string name="item_kept_original">Already optimized, original kept</string>
+
+    <!-- Settings -->
+    <string name="accent_color">Accent color</string>
+    <string name="theme">Theme</string>
+    <string name="font">Font</string>
+    <string name="font_default">Default</string>
+    <string name="font_sans">Sans serif</string>
+    <string name="font_serif">Serif</string>
+    <string name="font_monospace">Monospace</string>
+    <string name="font_cursive">Cursive</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_system">System</string>
+    <string name="language">Language</string>
+    <string name="lang_auto">Automatic</string>
+    <string name="lang_es" translatable="false">Español</string>
+    <string name="lang_en" translatable="false">English</string>
+    <string name="two_pass">Maximum precision (2-pass)</string>
+    <string name="two_pass_desc">Analyzes each video first to hit the target size more accurately. Twice as slow.</string>
+    <string name="notifications">Notifications</string>
+    <string name="dnd_desc">Android requires your permission to let the \"finished\" notification sound and vibrate even in Do Not Disturb mode. Open the channel settings and enable \"Override Do Not Disturb\".</string>
+    <string name="dnd_button">Open notification settings</string>
+    <string name="config_section">Configuration</string>
+    <string name="export_config">Export settings</string>
+    <string name="import_config">Import settings</string>
+    <string name="config_exported">Settings exported</string>
+    <string name="config_imported">Settings imported</string>
+    <string name="config_import_error">Could not import that file</string>
+    <string name="reset_stats">Reset saved-space counter</string>
+    <string name="about">About</string>
+    <string name="version_fmt">Version %1$s</string>
+
+    <!-- Errors -->
+    <string name="error_no_access">Grant \"All files access\" first</string>
+    <string name="error_read_file">Could not read the file</string>
+    <string name="error_encoder">Encoder does not support this configuration</string>
+    <string name="error_no_items">Nothing to compress</string>
+</resources>

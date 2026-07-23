@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fondo oscuro también en el tema base: la app es oscura por defecto
+         y así se evita el destello blanco al arrancar. -->
+    <style name="Theme.KompressALL" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">#12141A</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>
