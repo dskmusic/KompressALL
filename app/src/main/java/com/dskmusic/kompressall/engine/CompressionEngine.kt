@@ -102,29 +102,53 @@ object CompressionEngine {
     }
 
     fun start(context: Context, config: JobConfig, folderName: String) {
-        val appCtx = context.applicationContext
         val snapshot = _state.value
         if (snapshot.items.isEmpty() || snapshot.phase != Phase.CONFIG) return
+        runJob(context, snapshot.items, config, folderName.trim().ifBlank { snapshot.folderSuggestion })
+    }
+
+    private fun pendingFile(context: Context) = File(context.applicationContext.filesDir, "pending_job.json")
+
+    /** ¿Hay un lote que se quedó a medias en un cierre anterior de la app? */
+    fun hasPendingJob(context: Context): Boolean = pendingFile(context).exists()
+
+    fun loadPendingJob(context: Context): PendingJob? =
+        pendingFile(context).takeIf { it.exists() }?.let { f ->
+            parsePendingJob(f.readText())
+        }
+
+    fun discardPendingJob(context: Context) {
+        pendingFile(context).delete()
+    }
+
+    fun resumePendingJob(context: Context) {
+        val pending = loadPendingJob(context) ?: return
+        runJob(context, pending.items, pending.config, pending.folderName)
+    }
+
+    private fun runJob(context: Context, items: List<MediaEntry>, config: JobConfig, folderName: String) {
+        val appCtx = context.applicationContext
+        if (items.isEmpty()) return
+
+        val dirName = folderName.trim().ifBlank {
+            SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
+        }
 
         CompressionService.start(appCtx)
         _state.update {
-            it.copy(phase = Phase.RUNNING, currentIndex = 0, fileProgress = 0f,
+            it.copy(phase = Phase.RUNNING, items = items, currentIndex = 0, fileProgress = 0f,
                 results = emptyList(), cancelled = false)
         }
 
         job = scope.launch {
+            pendingFile(appCtx).writeText(PendingJob(items, config, dirName).toJson())
             val root = File(Environment.getExternalStorageDirectory(), "KompressALL")
-            val dirName = folderName.trim().ifBlank {
-                snapshot.folderSuggestion.trim().ifBlank {
-                    SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
-                }
-            }
             val destDir = File(root, dirName)
             val videosDir = File(destDir, "Videos")
             val backupDir = File(File(root, "Backups"), dirName)
             val results = mutableListOf<ItemResult>()
             try {
-                for ((i, item) in snapshot.items.withIndex()) {
+                for ((i, item) in items.withIndex()) {
                     if (!isActive || _state.value.cancelled) break
                     _state.update {
                         it.copy(currentIndex = i, fileProgress = 0f,
@@ -140,8 +164,14 @@ object CompressionEngine {
                     }
                     results += result
                     _state.update { it.copy(results = results.toList(), fileProgress = 1f) }
+                    // Se reescribe con lo que queda, para poder retomar solo lo pendiente
+                    // si la app se cierra a partir de aquí.
+                    val remaining = items.drop(i + 1)
+                    if (remaining.isEmpty()) pendingFile(appCtx).delete()
+                    else pendingFile(appCtx).writeText(PendingJob(remaining, config, dirName).toJson())
                 }
             } finally {
+                pendingFile(appCtx).delete()
                 val saved = results.sumOf { r -> r.savedBytes }
                 if (saved > 0) Settings.totalSaved += saved
                 _state.update { it.copy(phase = Phase.DONE, results = results.toList()) }

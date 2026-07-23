@@ -140,6 +140,10 @@
     <string name="compressing_title">Comprimiendo…</string>
     <string name="file_x_of_y">Archivo %1$d de %2$d</string>
     <string name="eta_fmt">Quedan unos %1$s</string>
+    <string name="pending_job_title">Trabajo sin terminar</string>
+    <string name="pending_job_text">KompressALL se cerró antes de tiempo con %1$d archivo(s) aún pendientes. ¿Continuar donde se quedó?</string>
+    <string name="pending_job_resume">Continuar</string>
+    <string name="pending_job_discard">Descartar</string>
     <string name="cancel">Cancelar</string>
     <string name="back">Volver</string>
     <string name="probe_pass">Pasada de análisis (modo 2 pasadas)</string>

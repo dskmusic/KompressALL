@@ -137,6 +137,10 @@
     <string name="compressing_title">Compressing…</string>
     <string name="file_x_of_y">File %1$d of %2$d</string>
     <string name="eta_fmt">About %1$s left</string>
+    <string name="pending_job_title">Unfinished job found</string>
+    <string name="pending_job_text">KompressALL closed unexpectedly with %1$d file(s) still pending. Continue where it left off?</string>
+    <string name="pending_job_resume">Continue</string>
+    <string name="pending_job_discard">Discard</string>
     <string name="cancel">Cancel</string>
     <string name="back">Back</string>
     <string name="ok">OK</string>

@@ -62,6 +62,8 @@ import com.dskmusic.kompressall.backup.BackupDestination
 import com.dskmusic.kompressall.backup.BackupEngine
 import com.dskmusic.kompressall.backup.BackupJob
 import com.dskmusic.kompressall.backup.BackupMode
+import com.dskmusic.kompressall.engine.CompressionEngine
+import com.dskmusic.kompressall.engine.PendingJob
 import com.dskmusic.kompressall.data.Settings as AppSettings
 import com.dskmusic.kompressall.model.EngineState
 import com.dskmusic.kompressall.model.ItemResult
@@ -101,6 +103,8 @@ fun HomeScreen(
     val context = LocalContext.current
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     LaunchedEffect(Unit) { updateInfo = UpdateChecker.check() }
+    var pendingJob by remember { mutableStateOf<PendingJob?>(null) }
+    LaunchedEffect(Unit) { pendingJob = CompressionEngine.loadPendingJob(context) }
 
     Box(Modifier.fillMaxSize().systemBarsPadding()) {
         Row(
@@ -137,6 +141,25 @@ fun HomeScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { updateInfo = null }) { Text(stringResource(R.string.update_later)) }
+                }
+            )
+        }
+        pendingJob?.let { pending ->
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text(stringResource(R.string.pending_job_title)) },
+                text = { Text(stringResource(R.string.pending_job_text, pending.items.size)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        pendingJob = null
+                        CompressionEngine.resumePendingJob(context)
+                    }) { Text(stringResource(R.string.pending_job_resume)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        CompressionEngine.discardPendingJob(context)
+                        pendingJob = null
+                    }) { Text(stringResource(R.string.pending_job_discard)) }
                 }
             )
         }
