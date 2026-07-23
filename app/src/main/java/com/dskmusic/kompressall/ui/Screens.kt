@@ -314,7 +314,7 @@ fun ResultScreen(state: EngineState, onDone: () -> Unit) {
             ) {
                 Text(stringResource(R.string.share_results))
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(20.dp))
         }
         Button(onClick = onDone, modifier = Modifier.fillMaxWidth().height(52.dp)) {
             Text(stringResource(R.string.done_button))
