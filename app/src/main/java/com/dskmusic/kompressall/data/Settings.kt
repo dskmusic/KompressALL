@@ -16,7 +16,7 @@ import org.json.JSONObject
 object Settings {
 
     const val DSK_URL = "https://www.dskmusic.com/dsk_dev_redirect.php"
-    const val DEFAULT_NOTIFICATION_SOUND = "Sound01.mp3"
+    const val DEFAULT_NOTIFICATION_SOUND = "sound_01"
     private const val KEY_TOTAL_SAVED = "total_saved_bytes"
 
     private lateinit var prefs: SharedPreferences
@@ -75,19 +75,12 @@ object Settings {
             twoPassFlow.value = value
         }
 
-    /** Nombre del asset (assets/notifications/) elegido para el sonido de "terminado". */
+    /** Nombre del recurso (res/raw/) elegido para el sonido de "terminado". */
     var notificationSound: String
         get() = prefs.getString("notification_sound", DEFAULT_NOTIFICATION_SOUND) ?: DEFAULT_NOTIFICATION_SOUND
         set(value) {
             prefs.edit().putString("notification_sound", value).apply()
             notificationSoundFlow.value = value
-        }
-
-    /** Uri de MediaStore ya registrada para [notificationSound] (la resuelve NotificationSounds). */
-    var notificationSoundUri: String
-        get() = prefs.getString("notification_sound_uri", "") ?: ""
-        set(value) {
-            prefs.edit().putString("notification_sound_uri", value).apply()
             onNotificationSettingsChanged?.invoke()
         }
 

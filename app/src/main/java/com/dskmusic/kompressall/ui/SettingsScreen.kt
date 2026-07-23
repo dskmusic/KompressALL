@@ -307,7 +307,6 @@ fun SettingsScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             ) { Text(stringResource(R.string.dnd_button), textAlign = TextAlign.Center) }
 
-            val soundScope = rememberCoroutineScope()
             val currentSound by Settings.notificationSoundFlow.collectAsState()
             val currentVibration by Settings.notificationVibrationFlow.collectAsState()
             val vibrationLabels = mapOf(
@@ -322,41 +321,27 @@ fun SettingsScreen(onBack: () -> Unit) {
             val previewText = stringResource(R.string.notif_done_text, 12, formatSize(1_500_000L))
 
             Text(stringResource(R.string.notif_sound_label), style = MaterialTheme.typography.labelLarge)
-            NOTIFICATION_SOUND_OPTIONS.forEach { soundFile ->
-                RadioRow(title = soundFile.removeSuffix(".mp3"), selected = currentSound == soundFile) {
-                    NotificationSounds.playPreview(context, soundFile)
-                    soundScope.launch(Dispatchers.IO) {
-                        val uri = NotificationSounds.registerAsset(context, soundFile)
-                        withContext(Dispatchers.Main) {
-                            if (uri != null) {
-                                Settings.notificationSound = soundFile
-                                Settings.notificationSoundUri = uri.toString()
-                            }
-                        }
-                    }
-                }
+            TwoColumnRadioGrid(
+                items = NOTIFICATION_SOUND_OPTIONS.mapIndexed { i, key ->
+                    key to stringResource(R.string.notif_sound_item, i + 1)
+                },
+                selectedKey = currentSound
+            ) { soundFile ->
+                Settings.notificationSound = soundFile
+                NotificationSounds.playPreview(context, soundFile)
             }
             OutlinedButton(
-                onClick = {
-                    soundScope.launch(Dispatchers.IO) {
-                        val uri = NotificationSounds.registerAsset(context, Settings.DEFAULT_NOTIFICATION_SOUND)
-                        withContext(Dispatchers.Main) {
-                            if (uri != null) {
-                                Settings.notificationSound = Settings.DEFAULT_NOTIFICATION_SOUND
-                                Settings.notificationSoundUri = uri.toString()
-                            }
-                        }
-                    }
-                },
+                onClick = { Settings.notificationSound = Settings.DEFAULT_NOTIFICATION_SOUND },
                 modifier = Modifier.fillMaxWidth()
             ) { Text(stringResource(R.string.notif_sound_reset), textAlign = TextAlign.Center) }
 
             Text(stringResource(R.string.notif_vibration_label), style = MaterialTheme.typography.labelLarge)
-            VIBRATION_OPTIONS.forEach { key ->
-                RadioRow(title = vibrationLabels[key] ?: key, selected = currentVibration == key) {
-                    Settings.notificationVibration = key
-                    NotificationSounds.vibratePreview(context, key)
-                }
+            TwoColumnRadioGrid(
+                items = VIBRATION_OPTIONS.map { key -> key to (vibrationLabels[key] ?: key) },
+                selectedKey = currentVibration
+            ) { key ->
+                Settings.notificationVibration = key
+                NotificationSounds.vibratePreview(context, key)
             }
 
             OutlinedButton(
@@ -617,6 +602,21 @@ fun SettingsScreen(onBack: () -> Unit) {
                 }
                 Footer()
             }
+        }
+    }
+}
+
+/** Lista de opciones en dos columnas (sonidos, patrones de vibración...). */
+@Composable
+private fun TwoColumnRadioGrid(items: List<Pair<String, String>>, selectedKey: String, onSelect: (String) -> Unit) {
+    items.chunked(2).forEach { pair ->
+        Row(Modifier.fillMaxWidth()) {
+            pair.forEach { (key, label) ->
+                Box(Modifier.weight(1f)) {
+                    RadioRow(title = label, selected = selectedKey == key) { onSelect(key) }
+                }
+            }
+            if (pair.size == 1) Box(Modifier.weight(1f))
         }
     }
 }

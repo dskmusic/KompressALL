@@ -49,6 +49,7 @@
 
     <!-- Notification sound / vibration -->
     <string name="notif_sound_label">Sound</string>
+    <string name="notif_sound_item">Sound %1$d</string>
     <string name="notif_sound_reset">Reset to default sound</string>
     <string name="notif_vibration_label">Vibration</string>
     <string name="vibration_default">Default</string>

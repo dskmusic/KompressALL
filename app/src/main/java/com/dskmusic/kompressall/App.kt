@@ -25,12 +25,7 @@ class App : Application() {
         )
         // Canal de "terminado": bypassDnd solo surte efecto si el usuario lo permite en
         // Ajustes > No molestar > Excepciones de apps (Android exige ese permiso manual).
-        // El sonido/vibración se resuelven aparte porque dependen de lo elegido en Ajustes.
-        if (Settings.notificationSoundUri.isBlank()) {
-            NotificationSounds.registerAsset(this, Settings.notificationSound)?.let {
-                Settings.notificationSoundUri = it.toString()
-            }
-        }
+        // El sonido/vibración elegidos en Ajustes se aplican aquí.
         NotificationSounds.rebuildDoneChannel(this)
     }
 }
