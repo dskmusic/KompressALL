@@ -25,6 +25,9 @@
     <string name="update_available_text">Hay disponible la versión %1$s. ¿Descargarla e instalarla?</string>
     <string name="update_download">Descargar</string>
     <string name="update_later">Más tarde</string>
+    <string name="update_check">Buscar actualizaciones</string>
+    <string name="update_checking">Buscando…</string>
+    <string name="update_none">Ya tienes la última versión</string>
 
     <!-- Config -->
     <string name="batch_summary">%1$d fotos · %2$d vídeos · %3$s</string>

@@ -25,16 +25,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +53,9 @@ import androidx.core.os.LocaleListCompat
 import com.dskmusic.kompressall.CompressionService
 import com.dskmusic.kompressall.R
 import com.dskmusic.kompressall.data.Settings
+import com.dskmusic.kompressall.update.UpdateChecker
+import com.dskmusic.kompressall.update.UpdateInfo
+import kotlinx.coroutines.launch
 
 fun applyLanguage(lang: String) {
     AppCompatDelegate.setApplicationLocales(
@@ -269,6 +275,46 @@ fun SettingsScreen(onBack: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                var checkingUpdate by remember { mutableStateOf(false) }
+                var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+                val scope = rememberCoroutineScope()
+                OutlinedButton(
+                    enabled = !checkingUpdate,
+                    onClick = {
+                        checkingUpdate = true
+                        scope.launch {
+                            val result = UpdateChecker.check()
+                            checkingUpdate = false
+                            if (result != null) {
+                                updateInfo = result
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.update_none),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                ) {
+                    Text(stringResource(if (checkingUpdate) R.string.update_checking else R.string.update_check))
+                }
+                updateInfo?.let { info ->
+                    AlertDialog(
+                        onDismissRequest = { updateInfo = null },
+                        title = { Text(stringResource(R.string.update_available_title)) },
+                        text = { Text(stringResource(R.string.update_available_text, info.versionName)) },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                UpdateChecker.downloadAndInstall(context, info)
+                                updateInfo = null
+                            }) { Text(stringResource(R.string.update_download)) }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { updateInfo = null }) { Text(stringResource(R.string.update_later)) }
+                        }
+                    )
+                }
                 Footer()
             }
         }
