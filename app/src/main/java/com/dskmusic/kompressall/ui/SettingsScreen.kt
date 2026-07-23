@@ -250,10 +250,27 @@ fun SettingsScreen(onBack: () -> Unit) {
                 onClick = { importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
                 modifier = Modifier.fillMaxWidth()
             ) { Text(stringResource(R.string.import_config), textAlign = TextAlign.Center) }
+            var confirmReset by remember { mutableStateOf(false) }
             OutlinedButton(
-                onClick = { Settings.totalSaved = 0 },
+                onClick = { confirmReset = true },
                 modifier = Modifier.fillMaxWidth()
             ) { Text(stringResource(R.string.reset_stats), textAlign = TextAlign.Center) }
+            if (confirmReset) {
+                AlertDialog(
+                    onDismissRequest = { confirmReset = false },
+                    title = { Text(stringResource(R.string.reset_stats_title)) },
+                    text = { Text(stringResource(R.string.reset_stats_text)) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            Settings.totalSaved = 0
+                            confirmReset = false
+                        }) { Text(stringResource(R.string.reset_stats)) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { confirmReset = false }) { Text(stringResource(R.string.cancel)) }
+                    }
+                )
+            }
         }
 
         SectionCard(title = stringResource(R.string.about)) {

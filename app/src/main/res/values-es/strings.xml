@@ -115,6 +115,8 @@
     <string name="config_imported">Configuración importada</string>
     <string name="config_import_error">No se pudo importar ese archivo</string>
     <string name="reset_stats">Restablecer contador de espacio ahorrado</string>
+    <string name="reset_stats_title">¿Restablecer el contador de espacio ahorrado?</string>
+    <string name="reset_stats_text">Se borrará para siempre el total de espacio que has ahorrado hasta ahora. No se puede deshacer.</string>
     <string name="about">Acerca de</string>
     <string name="version_fmt">Versión %1$s</string>
 

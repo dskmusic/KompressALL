@@ -119,6 +119,8 @@
     <string name="config_imported">Settings imported</string>
     <string name="config_import_error">Could not import that file</string>
     <string name="reset_stats">Reset saved-space counter</string>
+    <string name="reset_stats_title">Reset saved-space counter?</string>
+    <string name="reset_stats_text">This will permanently erase the total amount of space you have saved so far. This can\'t be undone.</string>
     <string name="about">About</string>
     <string name="version_fmt">Version %1$s</string>
 
