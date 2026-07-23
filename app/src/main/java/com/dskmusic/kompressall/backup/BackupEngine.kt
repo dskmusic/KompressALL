@@ -25,9 +25,17 @@ object BackupEngine {
     val state = _state.asStateFlow()
     private var job: Job? = null
 
+    @Volatile
+    private var cancelRequested = false
+
+    fun cancel() {
+        cancelRequested = true
+    }
+
     fun start(context: Context, backupJob: BackupJob) {
         if (_state.value.running) return
         val appCtx = context.applicationContext
+        cancelRequested = false
         val totalPerDest = backupJob.photoPaths.size + backupJob.videoPaths.size
         val bytesPerDest = (backupJob.photoPaths + backupJob.videoPaths).sumOf { File(it).length() }
         val overallTotalBytes = bytesPerDest * backupJob.destinations.size
@@ -37,6 +45,10 @@ object BackupEngine {
             totalFiles = totalPerDest * backupJob.destinations.size,
             overallBytesTotal = overallTotalBytes
         )
+        // Notificacion visible al instante: arrancar el foreground service tarda un
+        // poco en llegar a onCreate, y con lotes pequeños el respaldo puede terminar
+        // antes de eso sin que el progreso llegue a verse.
+        BackupService.postInitialNotification(appCtx)
         BackupService.start(appCtx)
 
         job = scope.launch {
@@ -60,7 +72,8 @@ object BackupEngine {
                 }
             }
 
-            for (dest in backupJob.destinations) {
+            destLoop@ for (dest in backupJob.destinations) {
+                if (cancelRequested) break@destLoop
                 _state.update { it.copy(currentDestination = dest.name) }
                 val password = Settings.destinationPassword(dest.id)
                 val sessionResult = SftpClient.openSession(dest.host, dest.port, dest.username, password)
@@ -78,25 +91,35 @@ object BackupEngine {
                     var lastError: String? = null
 
                     for (path in backupJob.photoPaths) {
+                        if (cancelRequested) { ok = false; lastError = "cancelled"; break }
                         fileCounter++
                         val file = File(path)
                         _state.update { it.copy(currentFileIndex = fileCounter, currentFileName = file.name) }
                         try {
-                            session.upload(file, baseDir) { transferred, total -> onFileProgress(transferred, total) }
+                            session.upload(
+                                file, baseDir,
+                                onProgress = { transferred, total -> onFileProgress(transferred, total) },
+                                isCancelled = { cancelRequested }
+                            )
                         } catch (e: Exception) {
                             ok = false; lastError = e.message
                         }
                         bytesDoneBase += file.length()
                     }
-                    if (backupJob.videoPaths.isNotEmpty()) {
+                    if (!cancelRequested && backupJob.videoPaths.isNotEmpty()) {
                         val videosDir = "$baseDir/Videos"
                         session.mkdirs(videosDir)
                         for (path in backupJob.videoPaths) {
+                            if (cancelRequested) { ok = false; lastError = "cancelled"; break }
                             fileCounter++
                             val file = File(path)
                             _state.update { it.copy(currentFileIndex = fileCounter, currentFileName = file.name) }
                             try {
-                                session.upload(file, videosDir) { transferred, total -> onFileProgress(transferred, total) }
+                                session.upload(
+                                    file, videosDir,
+                                    onProgress = { transferred, total -> onFileProgress(transferred, total) },
+                                    isCancelled = { cancelRequested }
+                                )
                             } catch (e: Exception) {
                                 ok = false; lastError = e.message
                             }
