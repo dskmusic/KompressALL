@@ -17,6 +17,7 @@ ToDo.rtf
 /build/
 /app/build/
 /*/build/
+/app/release/
 
 # Local configuration (machine-specific, never commit)
 local.properties
