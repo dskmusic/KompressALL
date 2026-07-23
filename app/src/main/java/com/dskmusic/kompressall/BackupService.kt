@@ -76,12 +76,13 @@ class BackupService : Service() {
         val pct = if (total > 0) (current * 100 / total) else 0
         return NotificationCompat.Builder(this, CompressionService.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notif)
-            .setContentTitle(getString(R.string.backup_notif_title, destination))
-            .setContentText("${getString(R.string.file_x_of_y, current, total)} · $name")
+            .setContentTitle("${getString(R.string.backup_notif_title, destination)} (${getString(R.string.file_x_of_y, current, total)})")
+            .setContentText(name)
             .setProgress(100, pct, current <= 0)
             .setOngoing(true)
             .setSilent(true)
             .setOnlyAlertOnce(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(openAppIntent())
             .build()
     }

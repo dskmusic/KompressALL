@@ -114,6 +114,7 @@
     <!-- Progress -->
     <string name="compressing_title">Comprimiendo…</string>
     <string name="file_x_of_y">Archivo %1$d de %2$d</string>
+    <string name="eta_fmt">Quedan unos %1$s</string>
     <string name="cancel">Cancelar</string>
     <string name="probe_pass">Pasada de análisis (modo 2 pasadas)</string>
 
