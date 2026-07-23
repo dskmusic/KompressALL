@@ -266,7 +266,7 @@ fun BackupDialog(
     onAddDestination: () -> Unit,
     onConfirm: (selected: List<BackupDestination>, mode: BackupMode, folderName: String, extraInfo: String) -> Unit
 ) {
-    var selected by remember { mutableStateOf(destinations.map { it.id }.toSet()) }
+    var selected by remember { mutableStateOf(emptySet<String>()) }
     var mode by remember { mutableStateOf(BackupMode.COPY) }
     var folderName by remember { mutableStateOf(folderSuggestion) }
     var extraInfo by remember { mutableStateOf("") }
