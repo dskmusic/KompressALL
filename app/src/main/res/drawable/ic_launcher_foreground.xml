@@ -8,11 +8,11 @@
     <group>
         <!-- Barra vertical de la K -->
         <path
-            android:fillColor="#7FD8BE"
+            android:fillColor="#1A73E8"
             android:pathData="M38,32 h8 v44 h-8 z" />
         <!-- Diagonales de la K -->
         <path
-            android:fillColor="#7FD8BE"
+            android:fillColor="#1A73E8"
             android:pathData="M48,54 L64,32 L73,32 L56,55.5 L73,76 L64,76 Z" />
         <!-- Flechas de compresión (izquierda y derecha apuntando al centro) -->
         <path

@@ -69,7 +69,8 @@ class MainActivity : AppCompatActivity() {
             val theme by Settings.themeFlow.collectAsState()
             val accent by Settings.accentFlow.collectAsState()
             val font by Settings.fontFlow.collectAsState()
-            KompressAllTheme(theme, accent, font) {
+            val customColor by Settings.customThemeColorFlow.collectAsState()
+            KompressAllTheme(theme, accent, font, customColor) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     Root(
                         onPick = {

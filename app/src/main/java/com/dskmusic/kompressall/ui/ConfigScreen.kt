@@ -204,6 +204,11 @@ fun ConfigScreen(
                         listOf("96" to 96, "128" to 128, "192" to 192, "256" to 256),
                         cfg.audioKbps
                     ) { update(cfg.copy(audioKbps = it)) }
+                    LabeledSwitch(
+                        stringResource(R.string.two_pass),
+                        stringResource(R.string.two_pass_desc),
+                        cfg.twoPass
+                    ) { update(cfg.copy(twoPass = it)) }
                 }
             }
         }

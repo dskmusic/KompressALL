@@ -19,6 +19,10 @@ ToDo.rtf
 /*/build/
 /app/release/
 
+# Fuente original de los sonidos de notificacion (referencia local); los que
+# realmente usa la app viven en app/src/main/assets/notifications/
+/assets/
+
 # Local configuration (machine-specific, never commit)
 local.properties
 

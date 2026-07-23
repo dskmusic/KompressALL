@@ -37,6 +37,28 @@
     <string name="battery_desc">Some phones (Xiaomi/MIUI and others) aggressively kill background apps. If compression or backup gets interrupted, disable battery optimization and autostart restrictions for KompressALL.</string>
     <string name="battery_button">Go to battery settings</string>
 
+    <!-- Theme -->
+    <string name="theme_amoled">AMOLED</string>
+    <string name="theme_custom">Choose…</string>
+
+    <!-- Fonts -->
+    <string name="font_sans_bold">Sans Bold</string>
+    <string name="font_serif_light">Serif Light</string>
+    <string name="font_monospace_medium">Mono Medium</string>
+    <string name="font_preview_word">Preview</string>
+
+    <!-- Notification sound / vibration -->
+    <string name="notif_sound_label">Sound</string>
+    <string name="notif_sound_reset">Reset to default sound</string>
+    <string name="notif_vibration_label">Vibration</string>
+    <string name="vibration_default">Default</string>
+    <string name="vibration_short">Short</string>
+    <string name="vibration_long">Long</string>
+    <string name="vibration_double">Double</string>
+    <string name="vibration_pulse">Pulse</string>
+    <string name="vibration_none">None</string>
+    <string name="notif_preview_button">Preview</string>
+
     <!-- Backup destinations -->
     <string name="backup_section">Backup destinations</string>
     <string name="backup_no_destinations">No destinations configured yet</string>
@@ -66,7 +88,9 @@
     <string name="backup_mode_title">Mode</string>
     <string name="backup_mode_copy">Copy</string>
     <string name="backup_mode_move">Move (deletes local files after a successful backup)</string>
-    <string name="backup_extra_info">Extra info (optional)</string>
+    <string name="backup_confirm_title">Confirm backup</string>
+    <string name="backup_confirm_text">This will create the folder \"%1$s\" at: %2$s</string>
+    <string name="backup_confirm_time_warning">Depending on the size of the files this may take a while.</string>
     <string name="backup_notif_title">Backing up to %1$s</string>
     <string name="backup_notif_done_title">Backup finished</string>
     <string name="backup_notif_done_text">%1$d destination(s) OK, %2$d failed</string>
@@ -113,6 +137,7 @@
     <string name="file_x_of_y">File %1$d of %2$d</string>
     <string name="eta_fmt">About %1$s left</string>
     <string name="cancel">Cancel</string>
+    <string name="back">Back</string>
     <string name="ok">OK</string>
     <string name="save">Save</string>
     <string name="edit">Edit</string>

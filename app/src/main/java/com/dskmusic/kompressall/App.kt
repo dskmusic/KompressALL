@@ -4,11 +4,13 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import com.dskmusic.kompressall.data.Settings
+import com.dskmusic.kompressall.notif.NotificationSounds
 
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
         Settings.init(this)
+        Settings.onNotificationSettingsChanged = { NotificationSounds.rebuildDoneChannel(this) }
         val notificationManager = getSystemService(NotificationManager::class.java)
         // Canal de progreso: importancia normal (no LOW) para que el sistema no lo
         // trate como "silencioso" y lo oculte en la pantalla de bloqueo cuando esa
@@ -21,20 +23,14 @@ class App : Application() {
                 NotificationManager.IMPORTANCE_DEFAULT
             )
         )
-        // Canal de "terminado": importancia alta para que suene y vibre con el
-        // tono por defecto, y marcado para saltarse No Molestar. bypassDnd solo
-        // surte efecto si el usuario lo permite en Ajustes > No molestar >
-        // Excepciones de apps (Android exige ese permiso manual, no se puede
-        // conceder desde la app).
-        notificationManager.createNotificationChannel(
-            NotificationChannel(
-                CompressionService.DONE_CHANNEL_ID,
-                getString(R.string.notif_done_channel_name),
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                enableVibration(true)
-                setBypassDnd(true)
+        // Canal de "terminado": bypassDnd solo surte efecto si el usuario lo permite en
+        // Ajustes > No molestar > Excepciones de apps (Android exige ese permiso manual).
+        // El sonido/vibración se resuelven aparte porque dependen de lo elegido en Ajustes.
+        if (Settings.notificationSoundUri.isBlank()) {
+            NotificationSounds.registerAsset(this, Settings.notificationSound)?.let {
+                Settings.notificationSoundUri = it.toString()
             }
-        )
+        }
+        NotificationSounds.rebuildDoneChannel(this)
     }
 }

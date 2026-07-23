@@ -58,8 +58,10 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.dskmusic.kompressall.R
+import com.dskmusic.kompressall.backup.BackupDestination
 import com.dskmusic.kompressall.backup.BackupEngine
 import com.dskmusic.kompressall.backup.BackupJob
+import com.dskmusic.kompressall.backup.BackupMode
 import com.dskmusic.kompressall.data.Settings as AppSettings
 import com.dskmusic.kompressall.model.EngineState
 import com.dskmusic.kompressall.model.ItemResult
@@ -68,6 +70,12 @@ import com.dskmusic.kompressall.update.UpdateChecker
 import com.dskmusic.kompressall.update.UpdateInfo
 import kotlinx.coroutines.delay
 import java.io.File
+
+private data class PendingBackup(
+    val destinations: List<BackupDestination>,
+    val mode: BackupMode,
+    val folderName: String
+)
 
 // ── Inicio ────────────────────────────────────────────────────────────────────
 
@@ -290,6 +298,7 @@ fun ResultScreen(state: EngineState, onDone: () -> Unit) {
     val destinations by AppSettings.destinationsFlow.collectAsState()
     var showBackupDialog by remember { mutableStateOf(false) }
     var showAddDestination by remember { mutableStateOf(false) }
+    var pendingBackup by remember { mutableStateOf<PendingBackup?>(null) }
     val totalOriginal = state.results.sumOf { it.originalSize }
     val totalFinal = state.results.filter { it.success }.sumOf { it.finalSize } +
             state.results.filter { !it.success }.sumOf { it.originalSize }
@@ -371,15 +380,48 @@ fun ResultScreen(state: EngineState, onDone: () -> Unit) {
             folderSuggestion = state.folderSuggestion,
             onDismiss = { showBackupDialog = false },
             onAddDestination = { showAddDestination = true },
-            onConfirm = { selected, mode, folderName, extraInfo ->
-                val photoPaths = shareable.filter { !it.isVideo }.mapNotNull { it.outputPath }
-                val videoPaths = shareable.filter { it.isVideo }.mapNotNull { it.outputPath }
-                BackupEngine.start(
-                    context,
-                    BackupJob(selected, folderName, extraInfo, mode, photoPaths, videoPaths)
-                )
+            onConfirm = { selected, mode, folderName ->
+                pendingBackup = PendingBackup(selected, mode, folderName)
                 showBackupDialog = false
-                Toast.makeText(context, context.getString(R.string.backup_started), Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+    pendingBackup?.let { pending ->
+        AlertDialog(
+            onDismissRequest = { pendingBackup = null; showBackupDialog = true },
+            title = { Text(stringResource(R.string.backup_confirm_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        stringResource(
+                            R.string.backup_confirm_text,
+                            pending.folderName,
+                            pending.destinations.joinToString(", ") { "${it.name} (${it.remotePath}/${pending.folderName})" }
+                        )
+                    )
+                    Text(
+                        stringResource(R.string.backup_confirm_time_warning),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val photoPaths = shareable.filter { !it.isVideo }.mapNotNull { it.outputPath }
+                    val videoPaths = shareable.filter { it.isVideo }.mapNotNull { it.outputPath }
+                    BackupEngine.start(
+                        context,
+                        BackupJob(pending.destinations, pending.folderName, pending.mode, photoPaths, videoPaths)
+                    )
+                    pendingBackup = null
+                    Toast.makeText(context, context.getString(R.string.backup_started), Toast.LENGTH_SHORT).show()
+                }) { Text(stringResource(R.string.ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingBackup = null; showBackupDialog = true }) {
+                    Text(stringResource(R.string.back))
+                }
             }
         )
     }

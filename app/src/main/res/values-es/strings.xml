@@ -40,6 +40,28 @@
     <string name="battery_desc">Algunos móviles (Xiaomi/MIUI y otros) cierran las apps en segundo plano de forma agresiva. Si la compresión o el respaldo se cortan, desactiva la optimización de batería y las restricciones de inicio automático para KompressALL.</string>
     <string name="battery_button">Ir a ajustes de batería</string>
 
+    <!-- Tema -->
+    <string name="theme_amoled">AMOLED</string>
+    <string name="theme_custom">Elegir…</string>
+
+    <!-- Tipografías -->
+    <string name="font_sans_bold">Sans negrita</string>
+    <string name="font_serif_light">Serif fina</string>
+    <string name="font_monospace_medium">Mono media</string>
+    <string name="font_preview_word">Vista previa</string>
+
+    <!-- Sonido / vibración de notificación -->
+    <string name="notif_sound_label">Sonido</string>
+    <string name="notif_sound_reset">Restablecer sonido por defecto</string>
+    <string name="notif_vibration_label">Vibración</string>
+    <string name="vibration_default">Por defecto</string>
+    <string name="vibration_short">Corta</string>
+    <string name="vibration_long">Larga</string>
+    <string name="vibration_double">Doble</string>
+    <string name="vibration_pulse">Pulso</string>
+    <string name="vibration_none">Ninguna</string>
+    <string name="notif_preview_button">Vista previa</string>
+
     <!-- Destinos de respaldo -->
     <string name="backup_section">Destinos de respaldo</string>
     <string name="backup_no_destinations">Todavía no hay destinos configurados</string>
@@ -69,7 +91,9 @@
     <string name="backup_mode_title">Modo</string>
     <string name="backup_mode_copy">Copiar</string>
     <string name="backup_mode_move">Mover (borra los archivos locales tras respaldar con éxito)</string>
-    <string name="backup_extra_info">Info adicional (opcional)</string>
+    <string name="backup_confirm_title">Confirmar respaldo</string>
+    <string name="backup_confirm_text">Se creará la carpeta \"%1$s\" en: %2$s</string>
+    <string name="backup_confirm_time_warning">Dependiendo del tamaño de los archivos puede tardar un tiempo.</string>
     <string name="backup_notif_title">Respaldando en %1$s</string>
     <string name="backup_notif_done_title">Respaldo terminado</string>
     <string name="backup_notif_done_text">%1$d destino(s) OK, %2$d fallidos</string>
@@ -116,6 +140,7 @@
     <string name="file_x_of_y">Archivo %1$d de %2$d</string>
     <string name="eta_fmt">Quedan unos %1$s</string>
     <string name="cancel">Cancelar</string>
+    <string name="back">Volver</string>
     <string name="probe_pass">Pasada de análisis (modo 2 pasadas)</string>
 
     <!-- Notifications -->

@@ -20,16 +20,20 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,12 +56,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.os.LocaleListCompat
 import com.dskmusic.kompressall.CompressionService
 import com.dskmusic.kompressall.R
 import com.dskmusic.kompressall.backup.BackupDestination
 import com.dskmusic.kompressall.data.Settings
+import com.dskmusic.kompressall.model.formatSize
+import com.dskmusic.kompressall.notif.NOTIFICATION_SOUND_OPTIONS
+import com.dskmusic.kompressall.notif.NotificationSounds
+import com.dskmusic.kompressall.notif.VIBRATION_OPTIONS
 import com.dskmusic.kompressall.update.UpdateChecker
 import com.dskmusic.kompressall.update.UpdateInfo
 import com.dskmusic.kompressall.util.MediaUtils
@@ -65,6 +76,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+
+private const val PREVIEW_NOTIF_ID = 999
 
 fun applyLanguage(lang: String) {
     AppCompatDelegate.setApplicationLocales(
@@ -79,7 +92,6 @@ fun SettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val theme by Settings.themeFlow.collectAsState()
     var language by remember { mutableStateOf(Settings.language) }
-    var twoPass by remember { mutableStateOf(Settings.loadConfig().twoPass) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -111,7 +123,6 @@ fun SettingsScreen(onBack: () -> Unit) {
             if (text != null && Settings.importJson(text)) {
                 language = Settings.language
                 applyLanguage(language)
-                twoPass = Settings.loadConfig().twoPass
                 Toast.makeText(context, R.string.config_imported, Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(context, R.string.config_import_error, Toast.LENGTH_SHORT).show()
@@ -139,14 +150,38 @@ fun SettingsScreen(onBack: () -> Unit) {
         }
 
         SectionCard(title = stringResource(R.string.theme)) {
-            RadioRow(stringResource(R.string.theme_dark), selected = theme == "dark") {
-                Settings.theme = "dark"
+            var showColorPicker by remember { mutableStateOf(false) }
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.weight(1f)) {
+                    RadioRow(stringResource(R.string.theme_system), selected = theme == "system") {
+                        Settings.theme = "system"
+                    }
+                    RadioRow(stringResource(R.string.theme_dark), selected = theme == "dark") {
+                        Settings.theme = "dark"
+                    }
+                    RadioRow(stringResource(R.string.theme_light), selected = theme == "light") {
+                        Settings.theme = "light"
+                    }
+                }
+                Column(Modifier.weight(1f)) {
+                    RadioRow(stringResource(R.string.theme_amoled), selected = theme == "amoled") {
+                        Settings.theme = "amoled"
+                    }
+                    RadioRow(stringResource(R.string.theme_custom), selected = theme == "custom") {
+                        showColorPicker = true
+                    }
+                }
             }
-            RadioRow(stringResource(R.string.theme_light), selected = theme == "light") {
-                Settings.theme = "light"
-            }
-            RadioRow(stringResource(R.string.theme_system), selected = theme == "system") {
-                Settings.theme = "system"
+            if (showColorPicker) {
+                ColorPickerDialog(
+                    initialColor = Settings.customThemeColor,
+                    onDismiss = { showColorPicker = false },
+                    onConfirm = { argb ->
+                        Settings.customThemeColor = argb
+                        Settings.theme = "custom"
+                        showColorPicker = false
+                    }
+                )
             }
         }
 
@@ -193,13 +228,38 @@ fun SettingsScreen(onBack: () -> Unit) {
                 "sans" to stringResource(R.string.font_sans),
                 "serif" to stringResource(R.string.font_serif),
                 "monospace" to stringResource(R.string.font_monospace),
-                "cursive" to stringResource(R.string.font_cursive)
+                "cursive" to stringResource(R.string.font_cursive),
+                "sans_bold" to stringResource(R.string.font_sans_bold),
+                "serif_light" to stringResource(R.string.font_serif_light),
+                "monospace_medium" to stringResource(R.string.font_monospace_medium)
             )
             FONT_OPTIONS.forEach { key ->
-                RadioRow(
-                    title = fontLabels[key] ?: key,
-                    selected = font == key
-                ) { Settings.font = key }
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { Settings.font = key },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(selected = font == key, onClick = { Settings.font = key })
+                    Text(
+                        fontLabels[key] ?: key,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        stringResource(R.string.font_preview_word),
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontFamily = fontFamilyFor(key),
+                            fontWeight = fontWeightFor(key)
+                        ),
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
@@ -216,14 +276,12 @@ fun SettingsScreen(onBack: () -> Unit) {
         }
 
         SectionCard(title = stringResource(R.string.videos_section)) {
+            val twoPass by Settings.twoPassFlow.collectAsState()
             LabeledSwitch(
                 stringResource(R.string.two_pass),
                 stringResource(R.string.two_pass_desc),
                 twoPass
-            ) {
-                twoPass = it
-                Settings.saveConfig(Settings.loadConfig().copy(twoPass = it))
-            }
+            ) { Settings.twoPass = it }
         }
 
         SectionCard(title = stringResource(R.string.notifications)) {
@@ -248,6 +306,77 @@ fun SettingsScreen(onBack: () -> Unit) {
                 },
                 modifier = Modifier.fillMaxWidth()
             ) { Text(stringResource(R.string.dnd_button), textAlign = TextAlign.Center) }
+
+            val soundScope = rememberCoroutineScope()
+            val currentSound by Settings.notificationSoundFlow.collectAsState()
+            val currentVibration by Settings.notificationVibrationFlow.collectAsState()
+            val vibrationLabels = mapOf(
+                "default" to stringResource(R.string.vibration_default),
+                "short" to stringResource(R.string.vibration_short),
+                "long" to stringResource(R.string.vibration_long),
+                "double" to stringResource(R.string.vibration_double),
+                "pulse" to stringResource(R.string.vibration_pulse),
+                "none" to stringResource(R.string.vibration_none)
+            )
+            val previewTitle = stringResource(R.string.notif_done_title)
+            val previewText = stringResource(R.string.notif_done_text, 12, formatSize(1_500_000L))
+
+            Text(stringResource(R.string.notif_sound_label), style = MaterialTheme.typography.labelLarge)
+            NOTIFICATION_SOUND_OPTIONS.forEach { soundFile ->
+                RadioRow(title = soundFile.removeSuffix(".mp3"), selected = currentSound == soundFile) {
+                    NotificationSounds.playPreview(context, soundFile)
+                    soundScope.launch(Dispatchers.IO) {
+                        val uri = NotificationSounds.registerAsset(context, soundFile)
+                        withContext(Dispatchers.Main) {
+                            if (uri != null) {
+                                Settings.notificationSound = soundFile
+                                Settings.notificationSoundUri = uri.toString()
+                            }
+                        }
+                    }
+                }
+            }
+            OutlinedButton(
+                onClick = {
+                    soundScope.launch(Dispatchers.IO) {
+                        val uri = NotificationSounds.registerAsset(context, Settings.DEFAULT_NOTIFICATION_SOUND)
+                        withContext(Dispatchers.Main) {
+                            if (uri != null) {
+                                Settings.notificationSound = Settings.DEFAULT_NOTIFICATION_SOUND
+                                Settings.notificationSoundUri = uri.toString()
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text(stringResource(R.string.notif_sound_reset), textAlign = TextAlign.Center) }
+
+            Text(stringResource(R.string.notif_vibration_label), style = MaterialTheme.typography.labelLarge)
+            VIBRATION_OPTIONS.forEach { key ->
+                RadioRow(title = vibrationLabels[key] ?: key, selected = currentVibration == key) {
+                    Settings.notificationVibration = key
+                    NotificationSounds.vibratePreview(context, key)
+                }
+            }
+
+            OutlinedButton(
+                onClick = {
+                    NotificationSounds.rebuildDoneChannel(context)
+                    try {
+                        NotificationManagerCompat.from(context).notify(
+                            PREVIEW_NOTIF_ID,
+                            NotificationCompat.Builder(context, CompressionService.DONE_CHANNEL_ID)
+                                .setSmallIcon(R.drawable.ic_notif)
+                                .setContentTitle(previewTitle)
+                                .setContentText(previewText)
+                                .setAutoCancel(true)
+                                .build()
+                        )
+                    } catch (_: SecurityException) {
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text(stringResource(R.string.notif_preview_button), textAlign = TextAlign.Center) }
         }
 
         SectionCard(title = stringResource(R.string.battery_section)) {
@@ -490,4 +619,48 @@ fun SettingsScreen(onBack: () -> Unit) {
             }
         }
     }
+}
+
+/**
+ * Android no tiene un selector de color del sistema invocable por Intent (a
+ * diferencia del selector de archivos); este es un selector propio con
+ * deslizadores RGB y una vista previa en vivo.
+ */
+@Composable
+private fun ColorPickerDialog(initialColor: Int, onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
+    var r by remember { mutableStateOf((initialColor shr 16) and 0xFF) }
+    var g by remember { mutableStateOf((initialColor shr 8) and 0xFF) }
+    var b by remember { mutableStateOf(initialColor and 0xFF) }
+    val preview = Color(0xFF000000.toInt() or (r shl 16) or (g shl 8) or b)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.theme_custom)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(preview)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
+                )
+                Text("R: $r", style = MaterialTheme.typography.bodySmall)
+                Slider(value = r.toFloat(), onValueChange = { r = it.toInt() }, valueRange = 0f..255f)
+                Text("G: $g", style = MaterialTheme.typography.bodySmall)
+                Slider(value = g.toFloat(), onValueChange = { g = it.toInt() }, valueRange = 0f..255f)
+                Text("B: $b", style = MaterialTheme.typography.bodySmall)
+                Slider(value = b.toFloat(), onValueChange = { b = it.toInt() }, valueRange = 0f..255f)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onConfirm(0xFF000000.toInt() or (r shl 16) or (g shl 8) or b)
+            }) { Text(stringResource(R.string.ok)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        }
+    )
 }

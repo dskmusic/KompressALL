@@ -264,12 +264,11 @@ fun BackupDialog(
     folderSuggestion: String,
     onDismiss: () -> Unit,
     onAddDestination: () -> Unit,
-    onConfirm: (selected: List<BackupDestination>, mode: BackupMode, folderName: String, extraInfo: String) -> Unit
+    onConfirm: (selected: List<BackupDestination>, mode: BackupMode, folderName: String) -> Unit
 ) {
     var selected by remember { mutableStateOf(emptySet<String>()) }
     var mode by remember { mutableStateOf(BackupMode.COPY) }
     var folderName by remember { mutableStateOf(folderSuggestion) }
-    var extraInfo by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -316,18 +315,13 @@ fun BackupDialog(
                     placeholder = { Text(stringResource(R.string.folder_name_hint)) },
                     singleLine = true, modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(
-                    value = extraInfo, onValueChange = { extraInfo = it },
-                    label = { Text(stringResource(R.string.backup_extra_info)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
             }
         },
         confirmButton = {
             TextButton(
                 enabled = destinations.isNotEmpty() && selected.isNotEmpty() && folderName.isNotBlank(),
                 onClick = {
-                    onConfirm(destinations.filter { it.id in selected }, mode, folderName.trim(), extraInfo.trim())
+                    onConfirm(destinations.filter { it.id in selected }, mode, folderName.trim())
                 }
             ) { Text(stringResource(R.string.ok)) }
         },

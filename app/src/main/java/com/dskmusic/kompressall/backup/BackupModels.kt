@@ -5,7 +5,6 @@ enum class BackupMode { COPY, MOVE }
 data class BackupJob(
     val destinations: List<BackupDestination>,
     val folderName: String,
-    val extraInfo: String,
     val mode: BackupMode,
     val photoPaths: List<String>,
     val videoPaths: List<String>

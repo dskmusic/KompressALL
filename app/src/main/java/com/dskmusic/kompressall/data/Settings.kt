@@ -16,6 +16,7 @@ import org.json.JSONObject
 object Settings {
 
     const val DSK_URL = "https://www.dskmusic.com/dsk_dev_redirect.php"
+    const val DEFAULT_NOTIFICATION_SOUND = "Sound01.mp3"
     private const val KEY_TOTAL_SAVED = "total_saved_bytes"
 
     private lateinit var prefs: SharedPreferences
@@ -26,6 +27,14 @@ object Settings {
     val fontFlow = MutableStateFlow("default")
     val totalSavedFlow = MutableStateFlow(0L)
     val destinationsFlow = MutableStateFlow<List<BackupDestination>>(emptyList())
+    val customThemeColorFlow = MutableStateFlow(0xFF2A2A2A.toInt())
+    val twoPassFlow = MutableStateFlow(false)
+    val notificationSoundFlow = MutableStateFlow(DEFAULT_NOTIFICATION_SOUND)
+    val notificationVibrationFlow = MutableStateFlow("default")
+
+    /** Lo fija App.kt: reconstruye el canal de notificación "terminado" con el
+     *  sonido/vibración actuales (Android no permite cambiarlos en un canal ya creado). */
+    var onNotificationSettingsChanged: (() -> Unit)? = null
 
     fun init(context: Context) {
         prefs = context.getSharedPreferences("kompressall_prefs", Context.MODE_PRIVATE)
@@ -42,7 +51,53 @@ object Settings {
         fontFlow.value = font
         totalSavedFlow.value = totalSaved
         destinationsFlow.value = destinations
+        customThemeColorFlow.value = customThemeColor
+        twoPassFlow.value = twoPass
+        notificationSoundFlow.value = notificationSound
+        notificationVibrationFlow.value = notificationVibration
     }
+
+    /** Color de fondo para el tema "custom" (ARGB). Gris neutro por defecto. */
+    var customThemeColor: Int
+        get() = prefs.getInt("custom_theme_color", 0xFF2A2A2A.toInt())
+        set(value) {
+            prefs.edit().putInt("custom_theme_color", value).apply()
+            customThemeColorFlow.value = value
+        }
+
+    /** Default global de "dos pasadas". Independiente del JobConfig de cada sesión:
+     *  cambiarlo aquí es lo único que cambia el default; el de Vídeo avanzado solo
+     *  afecta a esa sesión concreta (ver ConfigScreen). */
+    var twoPass: Boolean
+        get() = prefs.getBoolean("two_pass_global", false)
+        set(value) {
+            prefs.edit().putBoolean("two_pass_global", value).apply()
+            twoPassFlow.value = value
+        }
+
+    /** Nombre del asset (assets/notifications/) elegido para el sonido de "terminado". */
+    var notificationSound: String
+        get() = prefs.getString("notification_sound", DEFAULT_NOTIFICATION_SOUND) ?: DEFAULT_NOTIFICATION_SOUND
+        set(value) {
+            prefs.edit().putString("notification_sound", value).apply()
+            notificationSoundFlow.value = value
+        }
+
+    /** Uri de MediaStore ya registrada para [notificationSound] (la resuelve NotificationSounds). */
+    var notificationSoundUri: String
+        get() = prefs.getString("notification_sound_uri", "") ?: ""
+        set(value) {
+            prefs.edit().putString("notification_sound_uri", value).apply()
+            onNotificationSettingsChanged?.invoke()
+        }
+
+    var notificationVibration: String
+        get() = prefs.getString("notification_vibration", "default") ?: "default"
+        set(value) {
+            prefs.edit().putString("notification_vibration", value).apply()
+            notificationVibrationFlow.value = value
+            onNotificationSettingsChanged?.invoke()
+        }
 
     /** Destinos de respaldo por SFTP (sin contraseña, ver destinationPassword). */
     var destinations: List<BackupDestination>
@@ -135,7 +190,9 @@ object Settings {
         replaceOriginals = prefs.getBoolean("replace_originals", false),
         backupOriginals = prefs.getBoolean("backup_originals", true),
         deleteOriginals = prefs.getBoolean("delete_originals", false),
-        twoPass = prefs.getBoolean("two_pass", false)
+        // El default de dos pasadas viene de Settings.twoPass (independiente), no de
+        // aqui: el switch de Video avanzado solo cambia esto para la sesion actual.
+        twoPass = twoPass
     )
 
     fun saveConfig(c: JobConfig) {
@@ -151,7 +208,6 @@ object Settings {
             .putBoolean("replace_originals", c.replaceOriginals)
             .putBoolean("backup_originals", c.backupOriginals)
             .putBoolean("delete_originals", c.deleteOriginals)
-            .putBoolean("two_pass", c.twoPass)
             .apply()
     }
 
@@ -202,6 +258,11 @@ object Settings {
             fontFlow.value = font
             totalSavedFlow.value = totalSaved
             destinationsFlow.value = destinations
+            customThemeColorFlow.value = customThemeColor
+            twoPassFlow.value = twoPass
+            notificationSoundFlow.value = notificationSound
+            notificationVibrationFlow.value = notificationVibration
+            onNotificationSettingsChanged?.invoke()
             true
         } catch (_: Exception) {
             false
