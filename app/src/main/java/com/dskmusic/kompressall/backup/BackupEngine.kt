@@ -39,12 +39,13 @@ object BackupEngine {
             for (dest in backupJob.destinations) {
                 _state.update { it.copy(currentDestination = dest.name) }
                 val password = Settings.destinationPassword(dest.id)
-                val session = SftpClient.openSession(dest.host, dest.port, dest.username, password)
-                    .getOrElse { e ->
-                        results += BackupDestResult(dest.name, false, e.message)
-                        fileCounter += totalPerDest
-                        continue
-                    }
+                val sessionResult = SftpClient.openSession(dest.host, dest.port, dest.username, password)
+                if (sessionResult.isFailure) {
+                    results += BackupDestResult(dest.name, false, sessionResult.exceptionOrNull()?.message)
+                    fileCounter += totalPerDest
+                    continue
+                }
+                val session = sessionResult.getOrThrow()
                 try {
                     val baseDir = joinRemotePath(dest.remotePath, backupJob.folderName)
                     session.mkdirs(baseDir)
