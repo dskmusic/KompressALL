@@ -2,6 +2,7 @@ package com.dskmusic.kompressall.notif
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.media.AudioAttributes
@@ -9,7 +10,6 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
-import com.dskmusic.kompressall.CompressionService
 import com.dskmusic.kompressall.R
 import com.dskmusic.kompressall.data.Settings
 
@@ -37,6 +37,15 @@ fun vibrationPatternFor(key: String): LongArray = VIBRATION_PATTERNS[key] ?: VIB
 
 object NotificationSounds {
 
+    /**
+     * Id del canal de "terminado" para la combinación actual de sonido+vibración.
+     * Android (y sobre todo MIUI) puede "recordar" el sonido de un canal aunque se
+     * borre y se recree con el mismo id — por eso el id cambia con cada combinación
+     * en vez de reutilizar siempre uno fijo, así el sistema lo trata como un canal
+     * realmente nuevo y no restaura ajustes antiguos.
+     */
+    fun doneChannelId(): String = "kompressall_done_${Settings.notificationSound}_${Settings.notificationVibration}"
+
     private fun rawId(context: Context, resourceName: String): Int =
         context.resources.getIdentifier(resourceName, "raw", context.packageName)
 
@@ -44,9 +53,9 @@ object NotificationSounds {
      * Registra el sonido en la colección de notificaciones de MediaStore (asi el
      * propio sistema/MIUI lo reconoce como un sonido de notificacion instalado, en
      * vez de una Uri "android.resource://" que muchos fabricantes no aceptan para
-     * NotificationChannel.setSound). Borra cualquier registro anterior con el mismo
-     * nombre y vuelve a escribirlo entero cada vez, para no arrastrar una fila
-     * a medio escribir de un intento previo.
+     * NotificationChannel.setSound). Si ya hay un registro completo (no a medias)
+     * con este nombre lo reutiliza tal cual: la Uri se queda estable entre llamadas,
+     * porque el canal puede seguir apuntando a ella.
      */
     private fun registerInMediaStore(context: Context, resourceName: String): Uri? {
         val rawResId = rawId(context, resourceName)
@@ -54,6 +63,20 @@ object NotificationSounds {
         return try {
             val resolver = context.contentResolver
             val displayName = "KompressALL_$resourceName.mp3"
+            val existing = resolver.query(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.IS_PENDING),
+                "${MediaStore.MediaColumns.DISPLAY_NAME} = ?",
+                arrayOf(displayName),
+                null
+            )?.use { c ->
+                if (c.moveToFirst() && c.getInt(1) == 0) {
+                    ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, c.getLong(0))
+                } else null
+            }
+            if (existing != null) return existing
+
+            // No existe o quedo a medias de un intento anterior: limpiar y escribir de cero.
             resolver.delete(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                 "${MediaStore.MediaColumns.DISPLAY_NAME} = ?",
@@ -79,42 +102,42 @@ object NotificationSounds {
         }
     }
 
-    /** Recrea el canal de "terminado" con el sonido y patrón de vibración actuales.
-     *  Android ignora los cambios en un canal ya creado, así que hay que borrarlo y
-     *  volver a crearlo cada vez que el usuario cambia estas opciones. */
-    /** Devuelve un texto de diagnóstico: si la Uri se escribió bien en MediaStore y si el
-     *  canal, ya releído del sistema, realmente se quedó con ese sonido (para poder ver
-     *  si el fallo está en nuestro registro o en que el sistema/MIUI lo descarta). */
+    /** Crea (si hace falta) el canal de "terminado" para la combinación actual de
+     *  sonido+vibración. Devuelve un texto de diagnóstico: si la Uri se escribió bien
+     *  en MediaStore y si el canal, ya releído del sistema, realmente se quedó con
+     *  ese sonido. */
     fun rebuildDoneChannel(context: Context): String {
         val manager = context.getSystemService(NotificationManager::class.java)
             ?: return "sin NotificationManager"
-        manager.deleteNotificationChannel(CompressionService.DONE_CHANNEL_ID)
+        val id = doneChannelId()
         val uri = registerInMediaStore(context, Settings.notificationSound)
         val pattern = vibrationPatternFor(Settings.notificationVibration)
-        val channel = NotificationChannel(
-            CompressionService.DONE_CHANNEL_ID,
-            context.getString(R.string.notif_done_channel_name),
-            NotificationManager.IMPORTANCE_HIGH
-        ).apply {
-            setBypassDnd(true)
-            if (pattern.size > 1) {
-                enableVibration(true)
-                vibrationPattern = pattern
-            } else {
-                enableVibration(false)
+        if (manager.getNotificationChannel(id) == null) {
+            val channel = NotificationChannel(
+                id,
+                context.getString(R.string.notif_done_channel_name),
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                setBypassDnd(true)
+                if (pattern.size > 1) {
+                    enableVibration(true)
+                    vibrationPattern = pattern
+                } else {
+                    enableVibration(false)
+                }
+                if (uri != null) {
+                    setSound(
+                        uri,
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                }
             }
-            if (uri != null) {
-                setSound(
-                    uri,
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                )
-            }
+            manager.createNotificationChannel(channel)
         }
-        manager.createNotificationChannel(channel)
-        val applied = manager.getNotificationChannel(CompressionService.DONE_CHANNEL_ID)
+        val applied = manager.getNotificationChannel(id)
         return when {
             uri == null -> "registro en MediaStore falló (revisa permisos de almacenamiento)"
             applied == null -> "el canal no existe tras crearlo"

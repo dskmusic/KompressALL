@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import com.dskmusic.kompressall.engine.CompressionEngine
+import com.dskmusic.kompressall.notif.NotificationSounds
 import com.dskmusic.kompressall.model.Phase
 import com.dskmusic.kompressall.model.formatSize
 import kotlinx.coroutines.CoroutineScope
@@ -29,7 +30,6 @@ class CompressionService : Service() {
         // v2: Android ignora los cambios de importancia en un canal ya creado, así que
         // se cambia el id para forzar uno nuevo con IMPORTANCE_DEFAULT (ver App.kt).
         const val CHANNEL_ID = "kompressall_progress_v2"
-        const val DONE_CHANNEL_ID = "kompressall_done"
         private const val NOTIF_ID = 1
         private const val DONE_ID = 2
         private const val ACTION_CANCEL = "com.dskmusic.kompressall.CANCEL"
@@ -67,9 +67,10 @@ class CompressionService : Service() {
                     Phase.DONE -> {
                         val saved = state.results.sumOf { it.savedBytes }
                         if (!state.cancelled) {
+                            NotificationSounds.rebuildDoneChannel(this@CompressionService)
                             notifySafe(
                                 DONE_ID,
-                                NotificationCompat.Builder(this@CompressionService, DONE_CHANNEL_ID)
+                                NotificationCompat.Builder(this@CompressionService, NotificationSounds.doneChannelId())
                                     .setSmallIcon(R.drawable.ic_notif)
                                     .setContentTitle(getString(R.string.notif_done_title))
                                     .setContentText(

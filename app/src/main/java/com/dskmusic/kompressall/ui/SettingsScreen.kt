@@ -61,7 +61,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.os.LocaleListCompat
-import com.dskmusic.kompressall.CompressionService
 import com.dskmusic.kompressall.R
 import com.dskmusic.kompressall.backup.BackupDestination
 import com.dskmusic.kompressall.data.Settings
@@ -294,7 +293,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 onClick = {
                     val intent = Intent(android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
                         .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
-                        .putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, CompressionService.DONE_CHANNEL_ID)
+                        .putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, NotificationSounds.doneChannelId())
                     try {
                         context.startActivity(intent)
                     } catch (_: Exception) {
@@ -351,7 +350,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     try {
                         NotificationManagerCompat.from(context).notify(
                             PREVIEW_NOTIF_ID,
-                            NotificationCompat.Builder(context, CompressionService.DONE_CHANNEL_ID)
+                            NotificationCompat.Builder(context, NotificationSounds.doneChannelId())
                                 .setSmallIcon(R.drawable.ic_notif)
                                 .setContentTitle(previewTitle)
                                 .setContentText(previewText)

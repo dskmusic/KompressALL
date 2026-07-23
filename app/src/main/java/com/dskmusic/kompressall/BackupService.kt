@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import com.dskmusic.kompressall.backup.BackupEngine
+import com.dskmusic.kompressall.notif.NotificationSounds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -49,9 +50,10 @@ class BackupService : Service() {
                 if (state.done) {
                     val ok = state.results.count { it.success }
                     val failed = state.results.size - ok
+                    NotificationSounds.rebuildDoneChannel(this@BackupService)
                     notifySafe(
                         DONE_ID,
-                        NotificationCompat.Builder(this@BackupService, CompressionService.DONE_CHANNEL_ID)
+                        NotificationCompat.Builder(this@BackupService, NotificationSounds.doneChannelId())
                             .setSmallIcon(R.drawable.ic_notif)
                             .setContentTitle(getString(R.string.backup_notif_done_title))
                             .setContentText(getString(R.string.backup_notif_done_text, ok, failed))
