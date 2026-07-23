@@ -80,7 +80,7 @@ fun DestinationEditDialog(
     var password by remember { mutableStateOf(initialPassword) }
     var remotePath by remember { mutableStateOf(existing?.remotePath ?: "") }
     var testing by remember { mutableStateOf(false) }
-    var testResult by remember { mutableStateOf<Boolean?>(null) }
+    var testResult by remember { mutableStateOf<Result<Unit>?>(null) }
     var showBrowser by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -134,17 +134,17 @@ fun DestinationEditDialog(
                     onClick = {
                         testing = true; testResult = null
                         scope.launch {
-                            val result = SftpClient.test(host.trim(), port.toIntOrNull() ?: 22, username.trim(), password, remotePath.trim())
+                            testResult = SftpClient.test(host.trim(), port.toIntOrNull() ?: 22, username.trim(), password, remotePath.trim())
                             testing = false
-                            testResult = result.isSuccess
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(stringResource(if (testing) R.string.dest_testing else R.string.dest_test)) }
-                testResult?.let { ok ->
+                testResult?.let { result ->
                     Text(
-                        stringResource(if (ok) R.string.dest_test_ok else R.string.dest_test_fail),
-                        color = if (ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                        if (result.isSuccess) stringResource(R.string.dest_test_ok)
+                        else stringResource(R.string.dest_test_fail, result.exceptionOrNull()?.message ?: "?"),
+                        color = if (result.isSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }

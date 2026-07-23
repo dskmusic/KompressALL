@@ -6,8 +6,10 @@ import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.FileSystemFile
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.io.Closeable
 import java.io.File
+import java.security.Security
 
 data class RemoteDir(val name: String, val path: String)
 
@@ -42,6 +44,15 @@ class SftpSession private constructor(private val ssh: SSHClient, private val sf
     }
 
     companion object {
+        init {
+            // Necesario para negociar los algoritmos (curve25519, ed25519...) que usan
+            // por defecto los servidores OpenSSH modernos. Se quita primero el "BC" que
+            // trae Android (una version recortada sin estos algoritmos) para que no
+            // tape al de Bouncy Castle completo que acabamos de anadir como dependencia.
+            Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
+            Security.insertProviderAt(BouncyCastleProvider(), 1)
+        }
+
         fun open(host: String, port: Int, username: String, password: String): SftpSession {
             val ssh = SSHClient()
             ssh.addHostKeyVerifier(PromiscuousVerifier())

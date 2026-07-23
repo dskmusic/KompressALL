@@ -99,6 +99,8 @@ dependencies {
     implementation(libs.androidx.media3.effect)
     implementation(libs.androidx.media3.common)
     implementation(libs.sshj)
+    implementation(libs.bouncycastle)
+    implementation(libs.eddsa)
     implementation(libs.androidx.security.crypto)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

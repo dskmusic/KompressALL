@@ -10,6 +10,8 @@ composeBom = "2024.09.00"
 media3 = "1.5.0"
 sshj = "0.38.0"
 securityCrypto = "1.1.0-alpha06"
+bouncycastle = "1.78.1"
+eddsa = "0.3.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -29,6 +31,8 @@ androidx-media3-effect = { group = "androidx.media3", name = "media3-effect", ve
 androidx-media3-common = { group = "androidx.media3", name = "media3-common", version.ref = "media3" }
 sshj = { group = "com.hierynomus", name = "sshj", version.ref = "sshj" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+bouncycastle = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.ref = "bouncycastle" }
+eddsa = { group = "net.i2p.crypto", name = "eddsa", version.ref = "eddsa" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

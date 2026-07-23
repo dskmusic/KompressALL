@@ -58,7 +58,7 @@
     <string name="dest_test">Probar conexión</string>
     <string name="dest_testing">Probando…</string>
     <string name="dest_test_ok">Conexión correcta</string>
-    <string name="dest_test_fail">No se pudo conectar. Revisa los datos.</string>
+    <string name="dest_test_fail">No se pudo conectar: %1$s</string>
     <string name="dest_browse_error">No se pudo listar esta carpeta</string>
     <string name="dest_browse_use_here">Usar esta carpeta</string>
     <string name="dest_delete_title">¿Eliminar este destino?</string>
