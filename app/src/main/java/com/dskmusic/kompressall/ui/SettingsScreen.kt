@@ -283,9 +283,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             ) { Text(stringResource(R.string.battery_button), textAlign = TextAlign.Center) }
         }
 
-        val superuserModeForBackup by Settings.superuserModeFlow.collectAsState()
-        if (superuserModeForBackup) {
-            SectionCard(title = stringResource(R.string.backup_section)) {
+        SectionCard(title = stringResource(R.string.backup_section)) {
                 val destinations by Settings.destinationsFlow.collectAsState()
                 var editingNew by remember { mutableStateOf(false) }
                 var editingExisting by remember { mutableStateOf<BackupDestination?>(null) }
@@ -352,7 +350,6 @@ fun SettingsScreen(onBack: () -> Unit) {
                     )
                 }
             }
-        }
 
         SectionCard(title = stringResource(R.string.config_section)) {
             OutlinedButton(
@@ -394,21 +391,8 @@ fun SettingsScreen(onBack: () -> Unit) {
                     ""
                 }
             }
-            var aboutTapCount by remember { mutableStateOf(0) }
-            val superuserMode by Settings.superuserModeFlow.collectAsState()
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = !superuserMode) {
-                        aboutTapCount++
-                        when (aboutTapCount) {
-                            5 -> Toast.makeText(context, context.getString(R.string.superuser_hint), Toast.LENGTH_SHORT).show()
-                            7 -> {
-                                Settings.superuserMode = true
-                                Toast.makeText(context, context.getString(R.string.superuser_welcome), Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    },
+                modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {

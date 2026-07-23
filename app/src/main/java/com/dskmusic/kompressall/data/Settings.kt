@@ -25,7 +25,6 @@ object Settings {
     val accentFlow = MutableStateFlow("blue")
     val fontFlow = MutableStateFlow("default")
     val totalSavedFlow = MutableStateFlow(0L)
-    val superuserModeFlow = MutableStateFlow(false)
     val destinationsFlow = MutableStateFlow<List<BackupDestination>>(emptyList())
 
     fun init(context: Context) {
@@ -42,17 +41,8 @@ object Settings {
         accentFlow.value = accent
         fontFlow.value = font
         totalSavedFlow.value = totalSaved
-        superuserModeFlow.value = superuserMode
         destinationsFlow.value = destinations
     }
-
-    /** Modo oculto: activado tocando 7 veces la tarjeta "Acerca de". */
-    var superuserMode: Boolean
-        get() = prefs.getBoolean("superuser_mode", false)
-        set(value) {
-            prefs.edit().putBoolean("superuser_mode", value).apply()
-            superuserModeFlow.value = value
-        }
 
     /** Destinos de respaldo por SFTP (sin contraseña, ver destinationPassword). */
     var destinations: List<BackupDestination>
@@ -168,6 +158,13 @@ object Settings {
     fun exportJson(): String {
         val json = JSONObject()
         prefs.all.forEach { (key, value) -> json.put(key, value) }
+        // Contraseñas de los destinos de respaldo, para que un restaurado no
+        // obligue a volver a escribirlas a mano.
+        val passwords = JSONObject()
+        securePrefs.all.forEach { (key, value) ->
+            if (key.startsWith("dest_pw_") && value is String) passwords.put(key, value)
+        }
+        json.put("_dest_passwords", passwords)
         json.put("_app", "KompressALL")
         return json.toString(2)
     }
@@ -181,7 +178,7 @@ object Settings {
             if (json.optString("_app") != "KompressALL") return false
             val editor = prefs.edit()
             json.keys().forEach { key ->
-                if (key == "_app") return@forEach
+                if (key == "_app" || key == "_dest_passwords") return@forEach
                 val value = json.get(key)
                 when {
                     // org.json puede devolver un Integer para números pequeños aunque
@@ -195,10 +192,16 @@ object Settings {
                 }
             }
             editor.apply()
+            json.optJSONObject("_dest_passwords")?.let { passwords ->
+                val secureEditor = securePrefs.edit()
+                passwords.keys().forEach { key -> secureEditor.putString(key, passwords.getString(key)) }
+                secureEditor.apply()
+            }
             themeFlow.value = theme
             accentFlow.value = accent
             fontFlow.value = font
             totalSavedFlow.value = totalSaved
+            destinationsFlow.value = destinations
             true
         } catch (_: Exception) {
             false

@@ -261,7 +261,6 @@ fun ResultScreen(state: EngineState, onDone: () -> Unit) {
     val shareable = remember(state.results) {
         state.results.filter { it.success && it.outputPath != null }
     }
-    val superuserMode by AppSettings.superuserModeFlow.collectAsState()
     val destinations by AppSettings.destinationsFlow.collectAsState()
     var showBackupDialog by remember { mutableStateOf(false) }
     var showAddDestination by remember { mutableStateOf(false) }
@@ -325,13 +324,11 @@ fun ResultScreen(state: EngineState, onDone: () -> Unit) {
                 ) {
                     Text(stringResource(R.string.share_results))
                 }
-                if (superuserMode) {
-                    OutlinedButton(
-                        onClick = { showBackupDialog = true },
-                        modifier = Modifier.weight(1f).height(52.dp)
-                    ) {
-                        Text(stringResource(R.string.backup_button))
-                    }
+                OutlinedButton(
+                    onClick = { showBackupDialog = true },
+                    modifier = Modifier.weight(1f).height(52.dp)
+                ) {
+                    Text(stringResource(R.string.backup_button))
                 }
             }
             Spacer(Modifier.height(20.dp))

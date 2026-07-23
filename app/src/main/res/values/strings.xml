@@ -31,9 +31,6 @@
     <string name="update_checking">Checking…</string>
     <string name="update_none">You already have the latest version</string>
 
-    <!-- Hidden superuser mode -->
-    <string name="superuser_hint">You\'re 2 taps away from superuser mode</string>
-    <string name="superuser_welcome">Welcome home</string>
 
     <!-- Battery -->
     <string name="battery_section">Battery</string>

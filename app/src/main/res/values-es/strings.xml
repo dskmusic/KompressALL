@@ -34,9 +34,6 @@
     <string name="edit">Editar</string>
     <string name="delete">Eliminar</string>
 
-    <!-- Modo superusuario oculto -->
-    <string name="superuser_hint">Estás a 2 toques de ser superusuario</string>
-    <string name="superuser_welcome">Bienvenido a casa</string>
 
     <!-- Batería -->
     <string name="battery_section">Batería</string>
