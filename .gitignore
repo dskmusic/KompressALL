@@ -7,6 +7,8 @@ CREAR BACKUP.pyw
 dskmusic.keystore
 dskmusic.keystore_b64.txt
 subir_cambios.bat
+bajar_version.bat
+version.properties
 ToDo.rtf
 
 # Gradle

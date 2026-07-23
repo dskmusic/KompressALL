@@ -1,7 +1,18 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+}
+
+// Version local de respaldo (para compilar desde Android Studio sin pasar -P).
+// La actualiza bajar_version.bat con el ultimo build publicado en GitHub. No se versiona
+// (esta en .gitignore) porque solo es un valor de trabajo de esta maquina.
+val localVersionProps = Properties().apply {
+    val f = rootProject.file("version.properties")
+    if (f.exists()) load(FileInputStream(f))
 }
 
 android {
@@ -13,9 +24,11 @@ android {
         minSdk = 30
         targetSdk = 35
         // El Action de release pasa estos valores por linea de comandos (-PversionCode= -PversionName=);
-        // en local se quedan en estos valores por defecto.
-        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
-        versionName = project.findProperty("versionName") as String? ?: "1.0"
+        // en local caen a version.properties (o a 1 / "1.0" si no existe).
+        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull()
+            ?: (localVersionProps.getProperty("versionCode")?.toIntOrNull() ?: 1)
+        versionName = project.findProperty("versionName") as String?
+            ?: localVersionProps.getProperty("versionName") ?: "1.0"
     }
 
     signingConfigs {
@@ -31,12 +44,6 @@ android {
     }
 
     buildTypes {
-        debug {
-            // Package distinto para que el build local de pruebas conviva sin chocar
-            // con la version real instalada desde la Release de GitHub.
-            applicationIdSuffix = ".debug"
-            versionNameSuffix = "-debug"
-        }
         release {
             isMinifyEnabled = false
             if (!System.getenv("KEYSTORE_FILE").isNullOrBlank()) {

@@ -24,8 +24,8 @@ data class UpdateInfo(val versionName: String, val apkUrl: String)
 /** Comprueba la última Release en GitHub y descarga/instala el APK si hay una versión mas nueva. */
 object UpdateChecker {
 
-    // El tag de la Release es "v<versionName>-<versionCode>" (ver .github/workflows/build-release.yml),
-    // asi que el numero tras el ultimo "-" es directamente comparable con BuildConfig.VERSION_CODE.
+    // El tag de la Release es "v1.0.<versionCode>" (ver .github/workflows/build-release.yml),
+    // asi que el numero tras el ultimo "." es directamente comparable con BuildConfig.VERSION_CODE.
     suspend fun check(): UpdateInfo? = withContext(Dispatchers.IO) {
         try {
             val connection = URL("https://api.github.com/repos/$REPO/releases/latest")
@@ -33,9 +33,9 @@ object UpdateChecker {
             connection.setRequestProperty("Accept", "application/vnd.github+json")
             val json = JSONObject(connection.inputStream.bufferedReader().readText())
             val tag = json.getString("tag_name")
-            val remoteVersionCode = tag.substringAfterLast('-').toIntOrNull() ?: return@withContext null
+            val remoteVersionCode = tag.substringAfterLast('.').toIntOrNull() ?: return@withContext null
             if (remoteVersionCode <= BuildConfig.VERSION_CODE) return@withContext null
-            val versionName = tag.removePrefix("v").substringBeforeLast('-')
+            val versionName = tag.removePrefix("v")
             val apkUrl = json.getJSONArray("assets").getJSONObject(0).getString("browser_download_url")
             UpdateInfo(versionName, apkUrl)
         } catch (_: Exception) {

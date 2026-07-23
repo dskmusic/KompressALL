@@ -2,11 +2,6 @@ name: Build release APK
 
 on:
   workflow_dispatch:
-    inputs:
-      version_name:
-        description: "Nombre de version (ej. 1.1)"
-        required: false
-        default: "1.0"
 
 permissions:
   contents: write
@@ -39,11 +34,11 @@ jobs:
         run: |
           ./gradlew assembleRelease \
             -PversionCode=${{ github.run_number }} \
-            -PversionName=${{ inputs.version_name }}
+            -PversionName=1.0.${{ github.run_number }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ inputs.version_name }}-${{ github.run_number }}
-          name: KompressALL ${{ inputs.version_name }} (build ${{ github.run_number }})
+          tag_name: v1.0.${{ github.run_number }}
+          name: KompressALL 1.0.${{ github.run_number }}
           files: app/build/outputs/apk/release/app-release.apk
