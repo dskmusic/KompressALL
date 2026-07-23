@@ -3,6 +3,7 @@ package com.dskmusic.kompressall.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Environment
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,6 +57,8 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.dskmusic.kompressall.R
+import com.dskmusic.kompressall.backup.BackupEngine
+import com.dskmusic.kompressall.backup.BackupJob
 import com.dskmusic.kompressall.data.Settings as AppSettings
 import com.dskmusic.kompressall.model.EngineState
 import com.dskmusic.kompressall.model.ItemResult
@@ -258,6 +261,10 @@ fun ResultScreen(state: EngineState, onDone: () -> Unit) {
     val shareable = remember(state.results) {
         state.results.filter { it.success && it.outputPath != null }
     }
+    val superuserMode by AppSettings.superuserModeFlow.collectAsState()
+    val destinations by AppSettings.destinationsFlow.collectAsState()
+    var showBackupDialog by remember { mutableStateOf(false) }
+    var showAddDestination by remember { mutableStateOf(false) }
     val totalOriginal = state.results.sumOf { it.originalSize }
     val totalFinal = state.results.filter { it.success }.sumOf { it.finalSize } +
             state.results.filter { !it.success }.sumOf { it.originalSize }
@@ -308,11 +315,24 @@ fun ResultScreen(state: EngineState, onDone: () -> Unit) {
         }
         Spacer(Modifier.height(12.dp))
         if (shareable.isNotEmpty()) {
-            OutlinedButton(
-                onClick = { shareResults(context, shareable) },
-                modifier = Modifier.fillMaxWidth().height(52.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(stringResource(R.string.share_results))
+                OutlinedButton(
+                    onClick = { shareResults(context, shareable) },
+                    modifier = Modifier.weight(1f).height(52.dp)
+                ) {
+                    Text(stringResource(R.string.share_results))
+                }
+                if (superuserMode) {
+                    OutlinedButton(
+                        onClick = { showBackupDialog = true },
+                        modifier = Modifier.weight(1f).height(52.dp)
+                    ) {
+                        Text(stringResource(R.string.backup_button))
+                    }
+                }
             }
             Spacer(Modifier.height(20.dp))
         }
@@ -320,6 +340,37 @@ fun ResultScreen(state: EngineState, onDone: () -> Unit) {
             Text(stringResource(R.string.done_button))
         }
         Footer(Modifier.align(Alignment.CenterHorizontally))
+    }
+
+    if (showBackupDialog) {
+        BackupDialog(
+            destinations = destinations,
+            folderSuggestion = state.folderSuggestion,
+            onDismiss = { showBackupDialog = false },
+            onAddDestination = { showAddDestination = true },
+            onConfirm = { selected, mode, folderName, extraInfo ->
+                val photoPaths = shareable.filter { !it.isVideo }.mapNotNull { it.outputPath }
+                val videoPaths = shareable.filter { it.isVideo }.mapNotNull { it.outputPath }
+                BackupEngine.start(
+                    context,
+                    BackupJob(selected, folderName, extraInfo, mode, photoPaths, videoPaths)
+                )
+                showBackupDialog = false
+                Toast.makeText(context, context.getString(R.string.backup_started), Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+    if (showAddDestination) {
+        DestinationEditDialog(
+            existing = null,
+            initialPassword = "",
+            onDismiss = { showAddDestination = false },
+            onSave = { dest, password ->
+                AppSettings.addOrUpdateDestination(dest)
+                AppSettings.setDestinationPassword(dest.id, password)
+                showAddDestination = false
+            }
+        )
     }
 }
 

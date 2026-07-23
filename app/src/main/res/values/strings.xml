@@ -31,6 +31,49 @@
     <string name="update_checking">Checking…</string>
     <string name="update_none">You already have the latest version</string>
 
+    <!-- Hidden superuser mode -->
+    <string name="superuser_hint">You\'re 2 taps away from superuser mode</string>
+    <string name="superuser_welcome">Welcome home</string>
+
+    <!-- Battery -->
+    <string name="battery_section">Battery</string>
+    <string name="battery_desc">Some phones (Xiaomi/MIUI and others) aggressively kill background apps. If compression or backup gets interrupted, disable battery optimization and autostart restrictions for KompressALL.</string>
+    <string name="battery_button">Go to battery settings</string>
+
+    <!-- Backup destinations -->
+    <string name="backup_section">Backup destinations</string>
+    <string name="backup_no_destinations">No destinations configured yet</string>
+    <string name="dest_add_title">Add destination</string>
+    <string name="dest_edit_title">Edit destination</string>
+    <string name="dest_name">Name</string>
+    <string name="dest_host">Host / IP</string>
+    <string name="dest_port">Port</string>
+    <string name="dest_user">Username</string>
+    <string name="dest_password">Password</string>
+    <string name="dest_path">Remote path</string>
+    <string name="dest_browse">Browse…</string>
+    <string name="dest_test">Test connection</string>
+    <string name="dest_testing">Testing…</string>
+    <string name="dest_test_ok">Connection successful</string>
+    <string name="dest_test_fail">Couldn\'t connect. Check the details.</string>
+    <string name="dest_browse_error">Couldn\'t list this folder</string>
+    <string name="dest_browse_use_here">Use this folder</string>
+    <string name="dest_delete_title">Delete this destination?</string>
+    <string name="dest_delete_text">\"%1$s\" will be removed from your saved destinations.</string>
+
+    <!-- Backup dialog -->
+    <string name="backup_button">Back up</string>
+    <string name="backup_dialog_title">Back up to computer</string>
+    <string name="backup_choose_destinations">Destinations</string>
+    <string name="backup_mode_title">Mode</string>
+    <string name="backup_mode_copy">Copy</string>
+    <string name="backup_mode_move">Move (deletes local files after a successful backup)</string>
+    <string name="backup_extra_info">Extra info (optional)</string>
+    <string name="backup_notif_title">Backing up to %1$s</string>
+    <string name="backup_notif_done_title">Backup finished</string>
+    <string name="backup_notif_done_text">%1$d destination(s) OK, %2$d failed</string>
+    <string name="backup_started">Backup started, check the notification for progress</string>
+
     <!-- Config -->
     <string name="batch_summary">%1$d photos · %2$d videos · %3$s</string>
     <string name="images_section">Photos</string>
@@ -71,6 +114,10 @@
     <string name="compressing_title">Compressing…</string>
     <string name="file_x_of_y">File %1$d of %2$d</string>
     <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
+    <string name="save">Save</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
     <string name="probe_pass">Analysis pass (2-pass mode)</string>
 
     <!-- Notifications -->

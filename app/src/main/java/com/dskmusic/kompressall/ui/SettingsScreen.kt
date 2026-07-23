@@ -1,6 +1,9 @@
 package com.dskmusic.kompressall.ui
 
+import android.content.ComponentName
 import android.content.Intent
+import android.net.Uri
+import android.os.PowerManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -52,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import com.dskmusic.kompressall.CompressionService
 import com.dskmusic.kompressall.R
+import com.dskmusic.kompressall.backup.BackupDestination
 import com.dskmusic.kompressall.data.Settings
 import com.dskmusic.kompressall.update.UpdateChecker
 import com.dskmusic.kompressall.update.UpdateInfo
@@ -241,6 +245,115 @@ fun SettingsScreen(onBack: () -> Unit) {
             ) { Text(stringResource(R.string.dnd_button), textAlign = TextAlign.Center) }
         }
 
+        SectionCard(title = stringResource(R.string.battery_section)) {
+            Text(
+                stringResource(R.string.battery_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            OutlinedButton(
+                onClick = {
+                    try {
+                        context.startActivity(
+                            Intent().setComponent(
+                                ComponentName(
+                                    "com.miui.securitycenter",
+                                    "com.miui.permcenter.autostart.AutoStartManagementActivity"
+                                )
+                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    } catch (_: Exception) {
+                        val powerManager = context.getSystemService(PowerManager::class.java)
+                        try {
+                            if (powerManager?.isIgnoringBatteryOptimizations(context.packageName) != true) {
+                                context.startActivity(
+                                    Intent(
+                                        android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                        Uri.parse("package:${context.packageName}")
+                                    )
+                                )
+                            } else {
+                                context.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                            }
+                        } catch (_: Exception) {
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text(stringResource(R.string.battery_button), textAlign = TextAlign.Center) }
+        }
+
+        val superuserModeForBackup by Settings.superuserModeFlow.collectAsState()
+        if (superuserModeForBackup) {
+            SectionCard(title = stringResource(R.string.backup_section)) {
+                val destinations by Settings.destinationsFlow.collectAsState()
+                var editingNew by remember { mutableStateOf(false) }
+                var editingExisting by remember { mutableStateOf<BackupDestination?>(null) }
+                var pendingDelete by remember { mutableStateOf<BackupDestination?>(null) }
+
+                if (destinations.isEmpty()) {
+                    Text(
+                        stringResource(R.string.backup_no_destinations),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    destinations.forEach { dest ->
+                        DestinationRow(
+                            destination = dest,
+                            onEdit = { editingExisting = dest },
+                            onDelete = { pendingDelete = dest }
+                        )
+                    }
+                }
+                OutlinedButton(
+                    onClick = { editingNew = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(stringResource(R.string.dest_add_title)) }
+
+                if (editingNew) {
+                    DestinationEditDialog(
+                        existing = null,
+                        initialPassword = "",
+                        onDismiss = { editingNew = false },
+                        onSave = { dest, password ->
+                            Settings.addOrUpdateDestination(dest)
+                            Settings.setDestinationPassword(dest.id, password)
+                            editingNew = false
+                        }
+                    )
+                }
+                editingExisting?.let { dest ->
+                    DestinationEditDialog(
+                        existing = dest,
+                        initialPassword = Settings.destinationPassword(dest.id),
+                        onDismiss = { editingExisting = null },
+                        onSave = { updated, password ->
+                            Settings.addOrUpdateDestination(updated)
+                            Settings.setDestinationPassword(updated.id, password)
+                            editingExisting = null
+                        }
+                    )
+                }
+                pendingDelete?.let { dest ->
+                    AlertDialog(
+                        onDismissRequest = { pendingDelete = null },
+                        title = { Text(stringResource(R.string.dest_delete_title)) },
+                        text = { Text(stringResource(R.string.dest_delete_text, dest.name)) },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                Settings.removeDestination(dest.id)
+                                pendingDelete = null
+                            }) { Text(stringResource(R.string.delete)) }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.cancel)) }
+                        }
+                    )
+                }
+            }
+        }
+
         SectionCard(title = stringResource(R.string.config_section)) {
             OutlinedButton(
                 onClick = { exportLauncher.launch("kompressall_config.json") },
@@ -281,8 +394,21 @@ fun SettingsScreen(onBack: () -> Unit) {
                     ""
                 }
             }
+            var aboutTapCount by remember { mutableStateOf(0) }
+            val superuserMode by Settings.superuserModeFlow.collectAsState()
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = !superuserMode) {
+                        aboutTapCount++
+                        when (aboutTapCount) {
+                            5 -> Toast.makeText(context, context.getString(R.string.superuser_hint), Toast.LENGTH_SHORT).show()
+                            7 -> {
+                                Settings.superuserMode = true
+                                Toast.makeText(context, context.getString(R.string.superuser_welcome), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {

@@ -29,6 +29,54 @@
     <string name="update_checking">Buscando…</string>
     <string name="update_none">Ya tienes la última versión</string>
 
+    <string name="ok">Aceptar</string>
+    <string name="save">Guardar</string>
+    <string name="edit">Editar</string>
+    <string name="delete">Eliminar</string>
+
+    <!-- Modo superusuario oculto -->
+    <string name="superuser_hint">Estás a 2 toques de ser superusuario</string>
+    <string name="superuser_welcome">Bienvenido a casa</string>
+
+    <!-- Batería -->
+    <string name="battery_section">Batería</string>
+    <string name="battery_desc">Algunos móviles (Xiaomi/MIUI y otros) cierran las apps en segundo plano de forma agresiva. Si la compresión o el respaldo se cortan, desactiva la optimización de batería y las restricciones de inicio automático para KompressALL.</string>
+    <string name="battery_button">Ir a ajustes de batería</string>
+
+    <!-- Destinos de respaldo -->
+    <string name="backup_section">Destinos de respaldo</string>
+    <string name="backup_no_destinations">Todavía no hay destinos configurados</string>
+    <string name="dest_add_title">Añadir destino</string>
+    <string name="dest_edit_title">Editar destino</string>
+    <string name="dest_name">Nombre</string>
+    <string name="dest_host">Host / IP</string>
+    <string name="dest_port">Puerto</string>
+    <string name="dest_user">Usuario</string>
+    <string name="dest_password">Contraseña</string>
+    <string name="dest_path">Ruta remota</string>
+    <string name="dest_browse">Explorar…</string>
+    <string name="dest_test">Probar conexión</string>
+    <string name="dest_testing">Probando…</string>
+    <string name="dest_test_ok">Conexión correcta</string>
+    <string name="dest_test_fail">No se pudo conectar. Revisa los datos.</string>
+    <string name="dest_browse_error">No se pudo listar esta carpeta</string>
+    <string name="dest_browse_use_here">Usar esta carpeta</string>
+    <string name="dest_delete_title">¿Eliminar este destino?</string>
+    <string name="dest_delete_text">Se quitará \"%1$s\" de tus destinos guardados.</string>
+
+    <!-- Diálogo de respaldo -->
+    <string name="backup_button">Respaldar</string>
+    <string name="backup_dialog_title">Respaldar en ordenador</string>
+    <string name="backup_choose_destinations">Destinos</string>
+    <string name="backup_mode_title">Modo</string>
+    <string name="backup_mode_copy">Copiar</string>
+    <string name="backup_mode_move">Mover (borra los archivos locales tras respaldar con éxito)</string>
+    <string name="backup_extra_info">Info adicional (opcional)</string>
+    <string name="backup_notif_title">Respaldando en %1$s</string>
+    <string name="backup_notif_done_title">Respaldo terminado</string>
+    <string name="backup_notif_done_text">%1$d destino(s) OK, %2$d fallidos</string>
+    <string name="backup_started">Respaldo iniciado, mira la notificación para ver el progreso</string>
+
     <!-- Config -->
     <string name="batch_summary">%1$d fotos · %2$d vídeos · %3$s</string>
     <string name="images_section">Fotos</string>

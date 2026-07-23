@@ -2,6 +2,11 @@ package com.dskmusic.kompressall.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
+import com.dskmusic.kompressall.backup.BackupDestination
+import com.dskmusic.kompressall.backup.parseDestinations
+import com.dskmusic.kompressall.backup.toJson
 import com.dskmusic.kompressall.model.JobConfig
 import com.dskmusic.kompressall.model.Preset
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,18 +19,66 @@ object Settings {
     private const val KEY_TOTAL_SAVED = "total_saved_bytes"
 
     private lateinit var prefs: SharedPreferences
+    private lateinit var securePrefs: SharedPreferences
 
     val themeFlow = MutableStateFlow("dark")
     val accentFlow = MutableStateFlow("blue")
     val fontFlow = MutableStateFlow("default")
     val totalSavedFlow = MutableStateFlow(0L)
+    val superuserModeFlow = MutableStateFlow(false)
+    val destinationsFlow = MutableStateFlow<List<BackupDestination>>(emptyList())
 
     fun init(context: Context) {
         prefs = context.getSharedPreferences("kompressall_prefs", Context.MODE_PRIVATE)
+        val masterKey = MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+        securePrefs = EncryptedSharedPreferences.create(
+            context,
+            "kompressall_secure_prefs",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
         themeFlow.value = theme
         accentFlow.value = accent
         fontFlow.value = font
         totalSavedFlow.value = totalSaved
+        superuserModeFlow.value = superuserMode
+        destinationsFlow.value = destinations
+    }
+
+    /** Modo oculto: activado tocando 7 veces la tarjeta "Acerca de". */
+    var superuserMode: Boolean
+        get() = prefs.getBoolean("superuser_mode", false)
+        set(value) {
+            prefs.edit().putBoolean("superuser_mode", value).apply()
+            superuserModeFlow.value = value
+        }
+
+    /** Destinos de respaldo por SFTP (sin contraseña, ver destinationPassword). */
+    var destinations: List<BackupDestination>
+        get() = parseDestinations(prefs.getString("backup_destinations", null))
+        set(value) {
+            prefs.edit().putString("backup_destinations", value.toJson()).apply()
+            destinationsFlow.value = value
+        }
+
+    fun addOrUpdateDestination(destination: BackupDestination) {
+        val current = destinations.toMutableList()
+        val idx = current.indexOfFirst { it.id == destination.id }
+        if (idx >= 0) current[idx] = destination else current += destination
+        destinations = current
+    }
+
+    fun removeDestination(id: String) {
+        destinations = destinations.filterNot { it.id == id }
+        securePrefs.edit().remove("dest_pw_$id").apply()
+    }
+
+    /** Contraseña de un destino, guardada cifrada aparte (nunca en el JSON exportado). */
+    fun destinationPassword(id: String): String = securePrefs.getString("dest_pw_$id", "") ?: ""
+
+    fun setDestinationPassword(id: String, password: String) {
+        securePrefs.edit().putString("dest_pw_$id", password).apply()
     }
 
     var theme: String
