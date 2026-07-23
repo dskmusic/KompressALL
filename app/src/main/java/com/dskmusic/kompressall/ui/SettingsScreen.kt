@@ -346,7 +346,8 @@ fun SettingsScreen(onBack: () -> Unit) {
 
             OutlinedButton(
                 onClick = {
-                    NotificationSounds.rebuildDoneChannel(context)
+                    val diagnosis = NotificationSounds.rebuildDoneChannel(context)
+                    Toast.makeText(context, diagnosis, Toast.LENGTH_LONG).show()
                     try {
                         NotificationManagerCompat.from(context).notify(
                             PREVIEW_NOTIF_ID,

@@ -59,7 +59,7 @@
     <string name="vibration_short">Corta</string>
     <string name="vibration_long">Larga</string>
     <string name="vibration_double">Doble</string>
-    <string name="vibration_pulse">Pulso</string>
+    <string name="vibration_pulse">SOS</string>
     <string name="vibration_none">Ninguna</string>
     <string name="notif_preview_button">Vista previa</string>
 

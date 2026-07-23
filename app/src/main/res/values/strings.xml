@@ -56,7 +56,7 @@
     <string name="vibration_short">Short</string>
     <string name="vibration_long">Long</string>
     <string name="vibration_double">Double</string>
-    <string name="vibration_pulse">Pulse</string>
+    <string name="vibration_pulse">SOS</string>
     <string name="vibration_none">None</string>
     <string name="notif_preview_button">Preview</string>
 

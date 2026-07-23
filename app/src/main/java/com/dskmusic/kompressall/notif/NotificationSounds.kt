@@ -82,8 +82,12 @@ object NotificationSounds {
     /** Recrea el canal de "terminado" con el sonido y patrón de vibración actuales.
      *  Android ignora los cambios en un canal ya creado, así que hay que borrarlo y
      *  volver a crearlo cada vez que el usuario cambia estas opciones. */
-    fun rebuildDoneChannel(context: Context) {
-        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+    /** Devuelve un texto de diagnóstico: si la Uri se escribió bien en MediaStore y si el
+     *  canal, ya releído del sistema, realmente se quedó con ese sonido (para poder ver
+     *  si el fallo está en nuestro registro o en que el sistema/MIUI lo descarta). */
+    fun rebuildDoneChannel(context: Context): String {
+        val manager = context.getSystemService(NotificationManager::class.java)
+            ?: return "sin NotificationManager"
         manager.deleteNotificationChannel(CompressionService.DONE_CHANNEL_ID)
         val uri = registerInMediaStore(context, Settings.notificationSound)
         val pattern = vibrationPatternFor(Settings.notificationVibration)
@@ -110,6 +114,14 @@ object NotificationSounds {
             }
         }
         manager.createNotificationChannel(channel)
+        val applied = manager.getNotificationChannel(CompressionService.DONE_CHANNEL_ID)
+        return when {
+            uri == null -> "registro en MediaStore falló (revisa permisos de almacenamiento)"
+            applied == null -> "el canal no existe tras crearlo"
+            applied.sound == null -> "el sistema descartó el sonido: el canal se quedó sin sonido"
+            applied.sound != uri -> "el sistema aplicó otra uri: ${applied.sound}"
+            else -> "OK, el canal tiene: $uri"
+        }
     }
 
     /** Reproduce un sonido de res/raw directamente, para la vista previa en Ajustes. */
