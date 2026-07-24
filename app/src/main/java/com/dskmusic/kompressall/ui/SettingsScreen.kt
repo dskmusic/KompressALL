@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
@@ -49,6 +51,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -62,8 +65,10 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.os.LocaleListCompat
 import com.dskmusic.kompressall.R
+import com.dskmusic.kompressall.autosync.AutoSyncScheduler
 import com.dskmusic.kompressall.backup.BackupDestination
 import com.dskmusic.kompressall.data.Settings
+import com.dskmusic.kompressall.model.Preset
 import com.dskmusic.kompressall.model.formatSize
 import com.dskmusic.kompressall.notif.NOTIFICATION_SOUND_OPTIONS
 import com.dskmusic.kompressall.notif.NotificationSounds
@@ -83,6 +88,36 @@ fun applyLanguage(lang: String) {
         if (lang == "auto") LocaleListCompat.getEmptyLocaleList()
         else LocaleListCompat.forLanguageTags(lang)
     )
+}
+
+/** Intenta primero el atajo de autoinicio de MIUI; si no existe, cae a los
+ *  ajustes estándar de "ignorar optimización de batería" de Android. */
+fun openBatteryOptimizationSettings(context: android.content.Context) {
+    try {
+        context.startActivity(
+            Intent().setComponent(
+                ComponentName(
+                    "com.miui.securitycenter",
+                    "com.miui.permcenter.autostart.AutoStartManagementActivity"
+                )
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    } catch (_: Exception) {
+        val powerManager = context.getSystemService(PowerManager::class.java)
+        try {
+            if (powerManager?.isIgnoringBatteryOptimizations(context.packageName) != true) {
+                context.startActivity(
+                    Intent(
+                        android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                        Uri.parse("package:${context.packageName}")
+                    )
+                )
+            } else {
+                context.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            }
+        } catch (_: Exception) {
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -383,6 +418,125 @@ fun SettingsScreen(onBack: () -> Unit) {
             ) { Text(stringResource(R.string.notif_preview_button), textAlign = TextAlign.Center) }
         }
 
+        SectionCard(title = stringResource(R.string.auto_sync_section)) {
+            val autoSyncEnabled by Settings.autoSyncEnabledFlow.collectAsState()
+            LabeledSwitch(
+                stringResource(R.string.auto_sync_enable),
+                stringResource(R.string.auto_sync_enable_desc),
+                autoSyncEnabled
+            ) {
+                Settings.autoSyncEnabled = it
+                AutoSyncScheduler.reschedule(context)
+            }
+
+            Box {
+                Column(
+                    modifier = Modifier.alpha(if (autoSyncEnabled) 1f else 0.4f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val folders by Settings.autoSyncFoldersFlow.collectAsState()
+                    var showFolderBrowser by remember { mutableStateOf(false) }
+
+                    Text(stringResource(R.string.auto_sync_folders), style = MaterialTheme.typography.labelLarge)
+                    if (folders.isEmpty()) {
+                        Text(
+                            stringResource(R.string.auto_sync_no_folders),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        folders.forEach { folder ->
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    folder,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                IconButton(onClick = {
+                                    Settings.autoSyncFolders = folders - folder
+                                    AutoSyncScheduler.reschedule(context)
+                                }) {
+                                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete))
+                                }
+                            }
+                        }
+                    }
+                    OutlinedButton(onClick = { showFolderBrowser = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.auto_sync_add_folder))
+                    }
+
+                    Text(stringResource(R.string.auto_sync_frequency), style = MaterialTheme.typography.labelLarge)
+                    val frequency by Settings.autoSyncFrequencyMinutesFlow.collectAsState()
+                    ChoiceChips(
+                        listOf(
+                            stringResource(R.string.freq_15min) to 15,
+                            stringResource(R.string.freq_30min) to 30,
+                            stringResource(R.string.freq_1h) to 60,
+                            stringResource(R.string.freq_3h) to 180,
+                            stringResource(R.string.freq_6h) to 360,
+                            stringResource(R.string.freq_12h) to 720,
+                            stringResource(R.string.freq_24h) to 1440
+                        ),
+                        frequency
+                    ) {
+                        Settings.autoSyncFrequencyMinutes = it
+                        AutoSyncScheduler.reschedule(context)
+                    }
+
+                    Text(stringResource(R.string.auto_sync_image_preset_label), style = MaterialTheme.typography.labelLarge)
+                    val autoImagePreset by Settings.autoSyncImagePresetFlow.collectAsState()
+                    ChoiceChips(
+                        listOf(
+                            stringResource(R.string.preset_high) to Preset.HIGH,
+                            stringResource(R.string.preset_medium) to Preset.MEDIUM,
+                            stringResource(R.string.preset_low) to Preset.LOW
+                        ),
+                        autoImagePreset
+                    ) { Settings.autoSyncImagePreset = it }
+
+                    Text(stringResource(R.string.auto_sync_video_preset_label), style = MaterialTheme.typography.labelLarge)
+                    val autoVideoPreset by Settings.autoSyncVideoPresetFlow.collectAsState()
+                    ChoiceChips(
+                        listOf(
+                            stringResource(R.string.preset_high) to Preset.HIGH,
+                            stringResource(R.string.preset_medium) to Preset.MEDIUM,
+                            stringResource(R.string.preset_low) to Preset.LOW
+                        ),
+                        autoVideoPreset
+                    ) { Settings.autoSyncVideoPreset = it }
+
+                    OutlinedButton(
+                        onClick = { openBatteryOptimizationSettings(context) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(stringResource(R.string.battery_button), textAlign = TextAlign.Center) }
+
+                    if (showFolderBrowser) {
+                        LocalFolderBrowserDialog(
+                            startPath = Environment.getExternalStorageDirectory().absolutePath,
+                            onDismiss = { showFolderBrowser = false },
+                            onPicked = { path ->
+                                if (path !in folders) Settings.autoSyncFolders = folders + path
+                                showFolderBrowser = false
+                                AutoSyncScheduler.reschedule(context)
+                            }
+                        )
+                    }
+                }
+                if (!autoSyncEnabled) {
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {}
+                    )
+                }
+            }
+        }
+
         SectionCard(title = stringResource(R.string.battery_section)) {
             Text(
                 stringResource(R.string.battery_desc),
@@ -390,33 +544,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             OutlinedButton(
-                onClick = {
-                    try {
-                        context.startActivity(
-                            Intent().setComponent(
-                                ComponentName(
-                                    "com.miui.securitycenter",
-                                    "com.miui.permcenter.autostart.AutoStartManagementActivity"
-                                )
-                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        )
-                    } catch (_: Exception) {
-                        val powerManager = context.getSystemService(PowerManager::class.java)
-                        try {
-                            if (powerManager?.isIgnoringBatteryOptimizations(context.packageName) != true) {
-                                context.startActivity(
-                                    Intent(
-                                        android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                                        Uri.parse("package:${context.packageName}")
-                                    )
-                                )
-                            } else {
-                                context.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                            }
-                        } catch (_: Exception) {
-                        }
-                    }
-                },
+                onClick = { openBatteryOptimizationSettings(context) },
                 modifier = Modifier.fillMaxWidth()
             ) { Text(stringResource(R.string.battery_button), textAlign = TextAlign.Center) }
         }

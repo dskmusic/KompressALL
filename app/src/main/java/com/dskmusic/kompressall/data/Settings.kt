@@ -10,6 +10,7 @@ import com.dskmusic.kompressall.backup.toJson
 import com.dskmusic.kompressall.model.JobConfig
 import com.dskmusic.kompressall.model.Preset
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.json.JSONArray
 import org.json.JSONObject
 
 /** Preferencias de la app + exportar/importar configuración como JSON. */
@@ -33,6 +34,11 @@ object Settings {
     val notificationSoundFlow = MutableStateFlow(DEFAULT_NOTIFICATION_SOUND)
     val notificationVibrationFlow = MutableStateFlow("default")
     val minSizeToCompressBytesFlow = MutableStateFlow(DEFAULT_MIN_SIZE_BYTES)
+    val autoSyncEnabledFlow = MutableStateFlow(false)
+    val autoSyncFoldersFlow = MutableStateFlow<List<String>>(emptyList())
+    val autoSyncFrequencyMinutesFlow = MutableStateFlow(60)
+    val autoSyncImagePresetFlow = MutableStateFlow(Preset.MEDIUM)
+    val autoSyncVideoPresetFlow = MutableStateFlow(Preset.MEDIUM)
 
     /** Lo fija App.kt: reconstruye el canal de notificación "terminado" con el
      *  sonido/vibración actuales (Android no permite cambiarlos en un canal ya creado). */
@@ -58,6 +64,11 @@ object Settings {
         notificationSoundFlow.value = notificationSound
         notificationVibrationFlow.value = notificationVibration
         minSizeToCompressBytesFlow.value = minSizeToCompressBytes
+        autoSyncEnabledFlow.value = autoSyncEnabled
+        autoSyncFoldersFlow.value = autoSyncFolders
+        autoSyncFrequencyMinutesFlow.value = autoSyncFrequencyMinutes
+        autoSyncImagePresetFlow.value = autoSyncImagePreset
+        autoSyncVideoPresetFlow.value = autoSyncVideoPreset
     }
 
     /** Color de fondo para el tema "custom" (ARGB). Gris neutro por defecto. */
@@ -103,6 +114,62 @@ object Settings {
             prefs.edit().putLong("min_size_to_compress_bytes", value).apply()
             minSizeToCompressBytesFlow.value = value
         }
+
+    /** Interruptor general de la sincronización automática (carpeta vigilada). */
+    var autoSyncEnabled: Boolean
+        get() = prefs.getBoolean("auto_sync_enabled", false)
+        set(value) {
+            prefs.edit().putBoolean("auto_sync_enabled", value).apply()
+            autoSyncEnabledFlow.value = value
+        }
+
+    var autoSyncFolders: List<String>
+        get() {
+            val raw = prefs.getString("auto_sync_folders", null) ?: return emptyList()
+            return try {
+                val arr = JSONArray(raw)
+                (0 until arr.length()).map { arr.getString(it) }
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+        set(value) {
+            val arr = JSONArray()
+            value.forEach { arr.put(it) }
+            prefs.edit().putString("auto_sync_folders", arr.toString()).apply()
+            autoSyncFoldersFlow.value = value
+        }
+
+    /** En minutos; WorkManager no acepta menos de 15. */
+    var autoSyncFrequencyMinutes: Int
+        get() = prefs.getInt("auto_sync_frequency_minutes", 60)
+        set(value) {
+            prefs.edit().putInt("auto_sync_frequency_minutes", value).apply()
+            autoSyncFrequencyMinutesFlow.value = value
+        }
+
+    var autoSyncImagePreset: Preset
+        get() = try {
+            Preset.valueOf(prefs.getString("auto_sync_image_preset", null) ?: "MEDIUM")
+        } catch (_: Exception) { Preset.MEDIUM }
+        set(value) {
+            prefs.edit().putString("auto_sync_image_preset", value.name).apply()
+            autoSyncImagePresetFlow.value = value
+        }
+
+    var autoSyncVideoPreset: Preset
+        get() = try {
+            Preset.valueOf(prefs.getString("auto_sync_video_preset", null) ?: "MEDIUM")
+        } catch (_: Exception) { Preset.MEDIUM }
+        set(value) {
+            prefs.edit().putString("auto_sync_video_preset", value.name).apply()
+            autoSyncVideoPresetFlow.value = value
+        }
+
+    /** Marca de tiempo del último archivo ya considerado; solo se procesan los más nuevos. */
+    var autoSyncLastCheckedMillis: Long
+        get() = prefs.getLong("auto_sync_last_checked", 0L)
+        set(value) = prefs.edit().putLong("auto_sync_last_checked", value).apply()
 
     /** Destinos de respaldo por SFTP (sin contraseña, ver destinationPassword). */
     var destinations: List<BackupDestination>
@@ -268,6 +335,11 @@ object Settings {
             notificationSoundFlow.value = notificationSound
             notificationVibrationFlow.value = notificationVibration
         minSizeToCompressBytesFlow.value = minSizeToCompressBytes
+        autoSyncEnabledFlow.value = autoSyncEnabled
+        autoSyncFoldersFlow.value = autoSyncFolders
+        autoSyncFrequencyMinutesFlow.value = autoSyncFrequencyMinutes
+        autoSyncImagePresetFlow.value = autoSyncImagePreset
+        autoSyncVideoPresetFlow.value = autoSyncVideoPreset
             onNotificationSettingsChanged?.invoke()
             true
         } catch (_: Exception) {

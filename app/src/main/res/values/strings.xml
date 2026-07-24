@@ -51,6 +51,24 @@
     <!-- Notification sound / vibration -->
     <string name="compression_rules">Compression rules</string>
     <string name="reset_defaults">Reset to defaults</string>
+    <string name="auto_sync_notif_title">Checking watched folders…</string>
+    <string name="auto_sync_done_title">Auto sync finished</string>
+    <string name="auto_sync_section">Automatic sync</string>
+    <string name="auto_sync_enable">Enable automatic sync</string>
+    <string name="auto_sync_enable_desc">Periodically checks the folders below and compresses new photos/videos on its own, without opening the app.</string>
+    <string name="auto_sync_folders">Watched folders</string>
+    <string name="auto_sync_no_folders">No folders added yet</string>
+    <string name="auto_sync_add_folder">Add folder</string>
+    <string name="auto_sync_frequency">Check frequency</string>
+    <string name="freq_15min">15 min</string>
+    <string name="freq_30min">30 min</string>
+    <string name="freq_1h">1 h</string>
+    <string name="freq_3h">3 h</string>
+    <string name="freq_6h">6 h</string>
+    <string name="freq_12h">12 h</string>
+    <string name="freq_24h">24 h</string>
+    <string name="auto_sync_image_preset_label">Default preset for photos</string>
+    <string name="auto_sync_video_preset_label">Default preset for videos</string>
     <string name="min_size_desc">Files smaller than this are left as they are (not compressed).</string>
     <string name="min_size_off">Minimum size: off (compress everything)</string>
     <string name="min_size_fmt">Minimum size: %1$.1f MB</string>
