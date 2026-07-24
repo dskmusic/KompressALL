@@ -36,6 +36,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -581,6 +582,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 )
                 var checkingUpdate by remember { mutableStateOf(false) }
                 var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+                var downloadProgress by remember { mutableStateOf<Float?>(null) }
                 val scope = rememberCoroutineScope()
                 OutlinedButton(
                     enabled = !checkingUpdate,
@@ -610,13 +612,33 @@ fun SettingsScreen(onBack: () -> Unit) {
                         text = { Text(stringResource(R.string.update_available_text, info.versionName)) },
                         confirmButton = {
                             TextButton(onClick = {
-                                UpdateChecker.downloadAndInstall(context, info)
+                                downloadProgress = 0f
+                                scope.launch {
+                                    UpdateChecker.downloadAndInstall(context, info) { downloadProgress = it }
+                                    downloadProgress = null
+                                }
                                 updateInfo = null
                             }) { Text(stringResource(R.string.update_download)) }
                         },
                         dismissButton = {
                             TextButton(onClick = { updateInfo = null }) { Text(stringResource(R.string.update_later)) }
                         }
+                    )
+                }
+                downloadProgress?.let { progress ->
+                    AlertDialog(
+                        onDismissRequest = {},
+                        title = { Text(stringResource(R.string.update_downloading)) },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                LinearProgressIndicator(
+                                    progress = { progress },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Text("${(progress * 100).toInt()}%")
+                            }
+                        },
+                        confirmButton = {}
                     )
                 }
                 Footer()

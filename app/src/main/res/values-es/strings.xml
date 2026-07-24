@@ -29,6 +29,7 @@
     <string name="update_check">Buscar actualizaciones</string>
     <string name="update_checking">Buscando…</string>
     <string name="update_none">Ya tienes la última versión</string>
+    <string name="update_downloading">Descargando actualización…</string>
 
     <string name="ok">Aceptar</string>
     <string name="save">Guardar</string>

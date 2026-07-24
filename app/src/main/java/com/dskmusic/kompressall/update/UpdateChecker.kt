@@ -1,12 +1,7 @@
 package com.dskmusic.kompressall.update
 
-import android.app.DownloadManager
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
-import android.net.Uri
-import android.os.Build
 import androidx.core.content.FileProvider
 import com.dskmusic.kompressall.BuildConfig
 import kotlinx.coroutines.Dispatchers
@@ -43,37 +38,33 @@ object UpdateChecker {
         }
     }
 
-    fun downloadAndInstall(context: Context, info: UpdateInfo) {
-        val request = DownloadManager.Request(Uri.parse(info.apkUrl))
-            .setTitle("KompressALL ${info.versionName}")
-            .setDestinationInExternalFilesDir(context, null, APK_FILE_NAME)
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        val downloadId = downloadManager.enqueue(request)
-
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(ctx: Context, intent: Intent) {
-                if (intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1) != downloadId) return
-                context.unregisterReceiver(this)
-                val file = File(context.getExternalFilesDir(null), APK_FILE_NAME)
-                val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
-                context.startActivity(
-                    Intent(Intent.ACTION_VIEW).apply {
-                        setDataAndType(uri, "application/vnd.android.package-archive")
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    /** Descarga el APK dentro de la propia app reportando progreso (0f..1f) y lanza el instalador. */
+    suspend fun downloadAndInstall(context: Context, info: UpdateInfo, onProgress: (Float) -> Unit) {
+        val file = withContext(Dispatchers.IO) {
+            val connection = URL(info.apkUrl).openConnection() as HttpURLConnection
+            connection.instanceFollowRedirects = true
+            val total = connection.contentLength.toLong()
+            val target = File(context.getExternalFilesDir(null), APK_FILE_NAME)
+            connection.inputStream.use { input ->
+                target.outputStream().use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    var downloaded = 0L
+                    var read: Int
+                    while (input.read(buffer).also { read = it } != -1) {
+                        output.write(buffer, 0, read)
+                        downloaded += read
+                        if (total > 0) onProgress(downloaded.toFloat() / total)
                     }
-                )
+                }
             }
+            target
         }
-        val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
-        if (Build.VERSION.SDK_INT >= 33) {
-            // ACTION_DOWNLOAD_COMPLETE es un broadcast protegido enviado por el proceso
-            // del DownloadManager (no por el propio system server), así que con
-            // RECEIVER_NOT_EXPORTED nunca llega y el instalador no se lanza.
-            context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
-        } else {
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            context.registerReceiver(receiver, filter)
-        }
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        )
     }
 }

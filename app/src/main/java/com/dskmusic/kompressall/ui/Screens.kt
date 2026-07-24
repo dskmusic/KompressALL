@@ -38,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
@@ -69,6 +70,7 @@ import com.dskmusic.kompressall.model.ItemResult
 import com.dskmusic.kompressall.model.formatSize
 import com.dskmusic.kompressall.update.UpdateChecker
 import com.dskmusic.kompressall.update.UpdateInfo
+import kotlinx.coroutines.launch
 import java.io.File
 
 private data class PendingBackup(
@@ -99,7 +101,9 @@ fun HomeScreen(
     val totalSaved by AppSettings.totalSavedFlow.collectAsState()
     var showHelp by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+    var downloadProgress by remember { mutableStateOf<Float?>(null) }
     LaunchedEffect(Unit) { updateInfo = UpdateChecker.check() }
     var pendingJob by remember { mutableStateOf<PendingJob?>(null) }
     LaunchedEffect(Unit) { pendingJob = CompressionEngine.loadPendingJob(context) }
@@ -133,13 +137,33 @@ fun HomeScreen(
                 text = { Text(stringResource(R.string.update_available_text, info.versionName)) },
                 confirmButton = {
                     TextButton(onClick = {
-                        UpdateChecker.downloadAndInstall(context, info)
+                        downloadProgress = 0f
+                        scope.launch {
+                            UpdateChecker.downloadAndInstall(context, info) { downloadProgress = it }
+                            downloadProgress = null
+                        }
                         updateInfo = null
                     }) { Text(stringResource(R.string.update_download)) }
                 },
                 dismissButton = {
                     TextButton(onClick = { updateInfo = null }) { Text(stringResource(R.string.update_later)) }
                 }
+            )
+        }
+        downloadProgress?.let { progress ->
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text(stringResource(R.string.update_downloading)) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text("${(progress * 100).toInt()}%")
+                    }
+                },
+                confirmButton = {}
             )
         }
         pendingJob?.let { pending ->
