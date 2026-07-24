@@ -7,7 +7,7 @@ CREAR BACKUP.pyw
 dskmusic.keystore
 dskmusic.keystore_b64.txt
 subir_cambios.bat
-bajar_version.bat
+bajar_version_de_github.bat
 version.properties
 GUIA_KOMPRESSALL.pyw
 ToDo.rtf

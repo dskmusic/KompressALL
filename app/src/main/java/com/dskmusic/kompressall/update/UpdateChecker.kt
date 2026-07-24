@@ -67,7 +67,10 @@ object UpdateChecker {
         }
         val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
         if (Build.VERSION.SDK_INT >= 33) {
-            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            // ACTION_DOWNLOAD_COMPLETE es un broadcast protegido enviado por el proceso
+            // del DownloadManager (no por el propio system server), así que con
+            // RECEIVER_NOT_EXPORTED nunca llega y el instalador no se lanza.
+            context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             context.registerReceiver(receiver, filter)
