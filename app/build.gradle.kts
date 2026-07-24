@@ -101,7 +101,6 @@ dependencies {
     implementation(libs.sshj)
     implementation(libs.bouncycastle)
     implementation(libs.eddsa)
-    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.security.crypto)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

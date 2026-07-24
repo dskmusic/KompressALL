@@ -3,7 +3,6 @@ package com.dskmusic.kompressall
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import com.dskmusic.kompressall.autosync.AutoSyncScheduler
 import com.dskmusic.kompressall.data.Settings
 import com.dskmusic.kompressall.notif.NotificationSounds
 
@@ -28,6 +27,5 @@ class App : Application() {
         // Ajustes > No molestar > Excepciones de apps (Android exige ese permiso manual).
         // El sonido/vibración elegidos en Ajustes se aplican aquí.
         NotificationSounds.rebuildDoneChannel(this)
-        AutoSyncScheduler.reschedule(this)
     }
 }

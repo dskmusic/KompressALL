@@ -190,8 +190,7 @@ object CompressionEngine {
 
     // ── Imagen ────────────────────────────────────────────────────────────────
 
-    /** internal: tambien la usa AutoSyncWorker para la carpeta vigilada. */
-    internal fun processImage(
+    private fun processImage(
         ctx: Context, item: MediaEntry, cfg: JobConfig, destDir: File, backupDir: File
     ): ItemResult {
         val minSize = Settings.minSizeToCompressBytes
@@ -254,8 +253,7 @@ object CompressionEngine {
 
     // ── Vídeo ─────────────────────────────────────────────────────────────────
 
-    /** internal: tambien la usa AutoSyncWorker para la carpeta vigilada. */
-    internal suspend fun processVideo(
+    private suspend fun processVideo(
         ctx: Context, item: MediaEntry, cfg: JobConfig,
         destDir: File, videosDir: File, backupDir: File
     ): ItemResult {
