@@ -176,10 +176,7 @@ fun VideoEditDialog(
                     style = MaterialTheme.typography.labelLarge
                 )
                 ChoiceChips(
-                    listOf(
-                        stringResource(R.string.original_label) to 0,
-                        "90°" to 90, "180°" to 180, "270°" to 270
-                    ),
+                    listOf("0°" to 0, "90°" to 90, "180°" to 180, "270°" to 270),
                     edit.rotationDegrees
                 ) { edit = edit.copy(rotationDegrees = it) }
                 TextButton(onClick = {

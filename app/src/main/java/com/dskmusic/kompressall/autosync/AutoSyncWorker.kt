@@ -50,20 +50,29 @@ class AutoSyncWorker(context: Context, params: WorkerParameters) : CoroutineWork
 
         val ctx = applicationContext
         val since = Settings.autoSyncLastCheckedMillis
+        val scanStart = System.currentTimeMillis()
+        val done = Settings.autoSyncProcessed.toMutableSet()
         val outputRoot = File(Environment.getExternalStorageDirectory(), "KompressALL").absolutePath
 
         val candidateFiles = Settings.autoSyncFolders.flatMap { folderPath ->
             File(folderPath).listFiles()?.filter { f ->
                 f.isFile && f.lastModified() > since &&
                     !f.absolutePath.startsWith(outputRoot) &&
-                    MediaUtils.isSupportedMedia(f.name)
+                    MediaUtils.isSupportedMedia(f.name) &&
+                    processedKey(f) !in done
             }.orEmpty()
         }
 
-        Settings.autoSyncLastCheckedMillis = System.currentTimeMillis()
-        if (candidateFiles.isEmpty()) return@withContext Result.success()
+        if (candidateFiles.isEmpty()) {
+            Settings.autoSyncLastCheckedMillis = scanStart
+            return@withContext Result.success()
+        }
 
-        val items = candidateFiles.mapNotNull { MediaUtils.loadEntry(ctx, Uri.fromFile(it)) }
+        // Se conserva el File junto a la entrada: hace falta para anotar en el registro
+        // cuál quedó hecho, y loadEntry puede devolver null y descuadrar los indices.
+        val items = candidateFiles.mapNotNull { f ->
+            MediaUtils.loadEntry(ctx, Uri.fromFile(f))?.let { f to it }
+        }
         val cfg = JobConfig(
             imagePreset = Settings.autoSyncImagePreset,
             videoPreset = Settings.autoSyncVideoPreset,
@@ -82,7 +91,7 @@ class AutoSyncWorker(context: Context, params: WorkerParameters) : CoroutineWork
 
         var savedTotal = 0L
         var processedCount = 0
-        for (item in items) {
+        for ((file, item) in items) {
             if (!Settings.autoSyncEnabled) break
             val result = try {
                 when (item.kind) {
@@ -96,13 +105,24 @@ class AutoSyncWorker(context: Context, params: WorkerParameters) : CoroutineWork
             if (result?.success == true) {
                 savedTotal += result.savedBytes
                 processedCount++
+                // Se anota archivo a archivo: si el sistema mata el worker a mitad del
+                // lote, lo ya comprimido no se repite en la siguiente vuelta.
+                done += processedKey(file)
+                Settings.autoSyncProcessed = done
             }
         }
         if (savedTotal > 0) Settings.totalSaved += savedTotal
         if (processedCount > 0) notifyDone(ctx, processedCount, savedTotal)
 
+        // La marca solo avanza al terminar el lote: si el worker muere antes, la
+        // siguiente vuelta vuelve a ver lo que quedó pendiente en vez de darlo por visto.
+        Settings.autoSyncLastCheckedMillis = scanStart
+
         Result.success()
     }
+
+    /** Identifica un archivo por ruta y tamaño; ver Settings.autoSyncProcessed. */
+    private fun processedKey(file: File) = file.absolutePath + "|" + file.length()
 
     private fun createForegroundInfo(): ForegroundInfo {
         val notification = NotificationCompat.Builder(applicationContext, CompressionService.CHANNEL_ID)

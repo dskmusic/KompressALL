@@ -20,6 +20,7 @@ object Settings {
     const val DEFAULT_NOTIFICATION_SOUND = "sound_01"
     val DEFAULT_MIN_SIZE_BYTES = (0.8 * 1024 * 1024).toLong()
     private const val KEY_TOTAL_SAVED = "total_saved_bytes"
+    private const val MAX_PROCESSED_ENTRIES = 20000
 
     private lateinit var prefs: SharedPreferences
     private lateinit var securePrefs: SharedPreferences
@@ -175,6 +176,24 @@ object Settings {
     var autoSyncLastCheckedMillis: Long
         get() = prefs.getLong("auto_sync_last_checked", 0L)
         set(value) = prefs.edit().putLong("auto_sync_last_checked", value).apply()
+
+    /**
+     * Archivos que la sincronización automática ya comprimió, como "ruta|tamaño". La fecha
+     * de modificación queda fuera a propósito: tocarla (copiar, girar desde la galería,
+     * restaurar una copia) no debe provocar otra compresión, mientras que una edición de
+     * verdad cambia el tamaño y sí vuelve a entrar.
+     */
+    var autoSyncProcessed: Set<String>
+        get() = prefs.getStringSet("auto_sync_processed", null)?.toSet() ?: emptySet()
+        set(value) {
+            // Un StringSet no guarda orden, así que no se puede podar por antigüedad: al
+            // pasarse de tope se descarta una parte cualquiera y esos se comprimirán una
+            // vez más. Preferible a que las preferencias crezcan sin límite.
+            prefs.edit().putStringSet(
+                "auto_sync_processed",
+                if (value.size > MAX_PROCESSED_ENTRIES) value.take(MAX_PROCESSED_ENTRIES).toSet() else value
+            ).apply()
+        }
 
     /** Destinos de respaldo por SFTP (sin contraseña, ver destinationPassword). */
     var destinations: List<BackupDestination>
