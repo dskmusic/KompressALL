@@ -370,7 +370,7 @@ object CompressionEngine {
             // Transformer no arrastra las etiquetas y la carátula puede pesar cientos de
             // KB: se copian antes de comparar tamaños para no decidir sobre un tamaño
             // que aún va a crecer.
-            AudioCompressor.copyTags(ctx, item.sourceUri(), cache)
+            Mp4Metadata.copyTags(ctx, item.sourceUri(), cache, item.dateMillis)
             val kept = cache.length() >= item.size
             val outName = if (kept) item.name else "${item.name.substringBeforeLast('.')}.m4a"
             return placeTranscoded(ctx, item, cfg, audioDir, backupDir, outName, if (kept) null else cache)
@@ -536,6 +536,10 @@ object CompressionEngine {
             if (err != null) {
                 return ItemResult(item.name, true, item.size, 0, false, error = err)
             }
+
+            // Ubicación, fecha de grabación y etiquetas del contenedor: Transformer solo
+            // conserva la rotación, el resto hay que reinyectarlo.
+            Mp4Metadata.copyTags(ctx, item.sourceUri(), cache, item.dateMillis)
 
             // Si el resultado es mayor que el original, conservar el original. Con recorte
             // o giro no aplica: descartar la salida tiraría la edición del usuario.
