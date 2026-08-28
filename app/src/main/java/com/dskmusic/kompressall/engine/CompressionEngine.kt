@@ -367,6 +367,10 @@ object CompressionEngine {
             }
             if (err != null) return ItemResult(item.name, false, item.size, 0, false, error = err)
 
+            // Transformer no arrastra las etiquetas y la carátula puede pesar cientos de
+            // KB: se copian antes de comparar tamaños para no decidir sobre un tamaño
+            // que aún va a crecer.
+            AudioCompressor.copyTags(ctx, item.sourceUri(), cache)
             val kept = cache.length() >= item.size
             val outName = if (kept) item.name else "${item.name.substringBeforeLast('.')}.m4a"
             return placeTranscoded(ctx, item, cfg, audioDir, backupDir, outName, if (kept) null else cache)
