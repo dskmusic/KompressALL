@@ -285,8 +285,10 @@ object CompressionEngine {
             "h264" -> MimeTypes.VIDEO_H264
             "h265" -> MimeTypes.VIDEO_H265
             "av1"  -> MimeTypes.VIDEO_AV1
-            else -> if (VideoCompressor.hasEncoder(MimeTypes.VIDEO_H265)) MimeTypes.VIDEO_H265
-            else MimeTypes.VIDEO_H264
+            // H.264 por defecto: el H.265 comprime ~25% mejor pero muchos reproductores no lo
+            // aceptan (renderers DLNA de TVs, Windows sin el pack HEVC, dispositivos antiguos).
+            // Quien lo quiera lo elige en el preset MANUAL.
+            else -> MimeTypes.VIDEO_H264
         }
         if (!VideoCompressor.hasEncoder(mime)) mime = MimeTypes.VIDEO_H264
 
