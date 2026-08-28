@@ -10,7 +10,6 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.Effect
-import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.Clock
@@ -18,7 +17,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.FrameDropEffect
 import androidx.media3.effect.Presentation
 import androidx.media3.transformer.AudioEncoderSettings
-import androidx.media3.transformer.Codec
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultAssetLoaderFactory
 import androidx.media3.transformer.DefaultDecoderFactory
@@ -126,26 +124,6 @@ object VideoCompressor {
     }
 
     /**
-     * Media3 1.5.0 copia el `codecs` del vídeo de ENTRADA al Format que le pide al encoder, aunque
-     * el mime de salida sea otro (VideoSampleExporter.EncoderWrapper.getSurfaceInfo lo hace con un
-     * setCodecs(inputFormat.codecs) literal). DefaultEncoderFactory lo pasa a MediaFormatUtil, que
-     * lo mete como "codecs-string" en el MediaFormat, y MediaCodec revienta al configurar un
-     * encoder video/avc al que le llega codecs-string=hvc1.x (o al revés). Lo limpiamos aquí:
-     * el codecs de la entrada no aporta nada al configurar la salida.
-     */
-    private class StripCodecsEncoderFactory(
-        private val delegate: Codec.EncoderFactory
-    ) : Codec.EncoderFactory {
-        private fun Format.withoutCodecs() = buildUpon().setCodecs(null).build()
-        override fun createForAudioEncoding(format: Format): Codec =
-            delegate.createForAudioEncoding(format.withoutCodecs())
-        override fun createForVideoEncoding(format: Format): Codec =
-            delegate.createForVideoEncoding(format.withoutCodecs())
-        override fun audioNeedsEncoding(): Boolean = delegate.audioNeedsEncoding()
-        override fun videoNeedsEncoding(): Boolean = delegate.videoNeedsEncoding()
-    }
-
-    /**
      * Transcodifica [uri] a [outFile]. Devuelve null si tuvo éxito o un mensaje de error.
      * Cancelable: al cancelar la corrutina se cancela el Transformer.
      */
@@ -161,15 +139,55 @@ object VideoCompressor {
         audioBitrate: Int,       // bps
         audioPassthrough: Boolean,
         onProgress: (Float) -> Unit
-    ): String? = withContext(Dispatchers.Main) {
-        suspendCancellableCoroutine<String?> { cont ->
+    ): String? {
+        val (message, code) = runTransform(
+            context, uri, outFile, videoMime, videoBitrate, outDisplayHeight, outFps, srcFps,
+            audioBitrate, audioPassthrough, requestCbr = true, onProgress
+        ) ?: return null
+
+        // findEncoderWithClosestSupportedFormat filtra los encoders por resolución, bitrate y
+        // bitrate mode; si tras filtrar por bitrate mode no queda ninguno devuelve null y aborta
+        // con "The requested video encoding format is not supported" (el CodecInfo sale con
+        // name=null porque no llegó a crearse ningún codec). No hay fallback para eso, ni siquiera
+        // con setEnableFallback(true). Hay móviles cuyo encoder H.264 no soporta CBR aunque el de
+        // H.265 sí, así que reintentamos dejando que el encoder elija el bitrate mode.
+        if (code == ExportException.ERROR_CODE_ENCODING_FORMAT_UNSUPPORTED ||
+            code == ExportException.ERROR_CODE_ENCODER_INIT_FAILED
+        ) {
+            outFile.delete()
+            return runTransform(
+                context, uri, outFile, videoMime, videoBitrate, outDisplayHeight, outFps, srcFps,
+                audioBitrate, audioPassthrough, requestCbr = false, onProgress
+            )?.first
+        }
+        return message
+    }
+
+    /** Devuelve null si tuvo éxito, o (mensaje, ExportException.errorCode) si falló. */
+    private suspend fun runTransform(
+        context: Context,
+        uri: Uri,
+        outFile: File,
+        videoMime: String,
+        videoBitrate: Long,
+        outDisplayHeight: Int,
+        outFps: Int,
+        srcFps: Float,
+        audioBitrate: Int,
+        audioPassthrough: Boolean,
+        requestCbr: Boolean,
+        onProgress: (Float) -> Unit
+    ): Pair<String, Int>? = withContext(Dispatchers.Main) {
+        suspendCancellableCoroutine<Pair<String, Int>?> { cont ->
             try {
                 // CBR: muchos encoders hardware ignoran el bitrate solicitado en VBR.
                 // GOP de 2s: ~5-10% menos tamaño a igual calidad.
                 val videoSettings = VideoEncoderSettings.Builder()
                     .setBitrate(videoBitrate.toInt())
-                    .setBitrateMode(MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR)
                     .setiFrameIntervalSeconds(2f)
+                    .apply {
+                        if (requestCbr) setBitrateMode(MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR)
+                    }
                     .build()
                 val encoderFactoryBuilder = DefaultEncoderFactory.Builder(context)
                     .setEnableFallback(true)
@@ -186,7 +204,7 @@ object VideoCompressor {
                 if (!audioPassthrough) transformerBuilder.setAudioMimeType(MimeTypes.AUDIO_AAC)
                 val transformer = transformerBuilder
                     .setAssetLoaderFactory(DefaultAssetLoaderFactory(context, decoderFactory, Clock.DEFAULT))
-                    .setEncoderFactory(StripCodecsEncoderFactory(encoderFactoryBuilder.build()))
+                    .setEncoderFactory(encoderFactoryBuilder.build())
                     .addListener(object : Transformer.Listener {
                         override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                             if (cont.isActive) cont.resume(null)
@@ -198,7 +216,8 @@ object VideoCompressor {
                             exportException: ExportException
                         ) {
                             if (cont.isActive) cont.resume(
-                                exportException.localizedMessage ?: "Export error ${exportException.errorCode}"
+                                (exportException.localizedMessage
+                                    ?: "Export error ${exportException.errorCode}") to exportException.errorCode
                             )
                         }
                     })
@@ -247,7 +266,7 @@ object VideoCompressor {
                     }
                 }
             } catch (e: Exception) {
-                if (cont.isActive) cont.resume(e.message ?: "Error")
+                if (cont.isActive) cont.resume((e.message ?: "Error") to 0)
             }
         }
     }
