@@ -6,7 +6,7 @@
     <string name="shortcut_pick_long">Seleccionar fotos y vídeos</string>
 
     <!-- Home -->
-    <string name="home_tagline">Comprime tus fotos y vídeos</string>
+    <string name="home_tagline">Comprime tus fotos, vídeos y audios</string>
     <string name="select_media">Seleccionar fotos y vídeos</string>
     <string name="add_more">+ Añadir más</string>
     <string name="incoming_batch_title">Nuevos archivos recibidos</string>
@@ -20,7 +20,7 @@
     <string name="settings">Ajustes</string>
     <string name="help">Ayuda</string>
     <string name="help_title">Cómo funciona KompressALL</string>
-    <string name="help_text">1. Elige fotos y vídeos, o envíalos/ábrelos en la app desde la cámara o la galería.\n\n2. Elige un preset — Alta, Media (recomendado) o Máx. ahorro — para fotos y para vídeos, o ajústalo todo a mano con la opción +.\n\n3. Elige dónde guardar: una carpeta nueva con fecha, o reemplazar los originales (con copia de seguridad opcional).\n\n4. Toca Comprimir. Puedes minimizar la app — una notificación te avisa del progreso y te deja cancelar en cualquier momento.\n\n5. Revisa el resumen antes/después y comparte el resultado directamente si quieres.</string>
+    <string name="help_text">1. Elige fotos y vídeos, archivos de audio, o una carpeta entera de golpe. También puedes enviarlos/abrirlos en la app desde la cámara, la galería o el reproductor de música.\n\n2. Elige un preset — Alta, Media (recomendado) o Máx. ahorro — para fotos, vídeos y audio, o ajústalo todo a mano con la opción +.\n\n3. Elige dónde guardar: una carpeta nueva con fecha, o reemplazar los originales (con copia de seguridad opcional).\n\n4. Toca Comprimir. Puedes minimizar la app — una notificación te avisa del progreso y te deja cancelar en cualquier momento.\n\n5. Revisa el resumen antes/después y comparte el resultado directamente si quieres.</string>
     <string name="help_got_it">Entendido</string>
     <string name="update_available_title">Actualización disponible</string>
     <string name="update_available_text">Hay disponible la versión %1$s. ¿Descargarla e instalarla?</string>
@@ -59,7 +59,7 @@
     <string name="auto_sync_done_title">Sincronización automática terminada</string>
     <string name="auto_sync_section">Sincronización automática</string>
     <string name="auto_sync_enable">Activar sincronización automática</string>
-    <string name="auto_sync_enable_desc">Comprueba periódicamente las carpetas de abajo y comprime fotos/vídeos nuevos por su cuenta, sin abrir la app.</string>
+    <string name="auto_sync_enable_desc">Comprueba periódicamente las carpetas de abajo y comprime fotos, vídeos y audios nuevos por su cuenta, sin abrir la app.</string>
     <string name="auto_sync_folders">Carpetas vigiladas</string>
     <string name="auto_sync_no_folders">Todavía no has añadido ninguna carpeta</string>
     <string name="auto_sync_add_folder">Añadir carpeta</string>
@@ -146,7 +146,7 @@
     <string name="estimated_size_fmt">Tamaño final estimado: ~%1$s</string>
     <string name="destination">Destino</string>
     <string name="dest_new_folder">Carpeta nueva</string>
-    <string name="dest_new_folder_desc">Guarda en KompressALL/, los vídeos en subcarpeta Videos/</string>
+    <string name="dest_new_folder_desc">Guarda en KompressALL/, los vídeos en Videos/ y el audio en Audio/</string>
     <string name="folder_name_label">Nombre de la carpeta</string>
     <string name="folder_name_hint">ej. 20270723 Día de playa</string>
     <string name="dest_replace">Reemplazar originales</string>
@@ -240,4 +240,12 @@
     <string name="video_edit_range_fmt">De %1$s a %2$s</string>
     <string name="video_edit_no_duration">No se ha podido leer la duración de este vídeo; aun así puedes girarlo.</string>
     <string name="rotation_label">Giro</string>
+    <string name="select_audio">Archivos de audio</string>
+    <string name="add_audio">+ Audio</string>
+    <string name="trim_start">Inicio</string>
+    <string name="trim_end">Fin</string>
+    <string name="trim_duration_fmt">Seleccionado: %1$s de %2$s</string>
+    <string name="low_space_title">Espacio insuficiente</string>
+    <string name="low_space_text">Este lote puede necesitar hasta %1$s y solo quedan %2$s libres. Si el almacenamiento se llena a medias, algunos archivos fallarán.</string>
+    <string name="low_space_continue">Comprimir igualmente</string>
 </resources>

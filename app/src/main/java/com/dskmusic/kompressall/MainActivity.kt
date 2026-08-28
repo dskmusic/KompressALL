@@ -60,6 +60,20 @@ class MainActivity : AppCompatActivity() {
         if (uris.isNotEmpty()) CompressionEngine.load(this, uris, append = true)
     }
 
+    // El Photo Picker del sistema no ofrece audio; para eso hace falta el selector de
+    // documentos, que sí filtra por MIME.
+    private val pickAudio = registerForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isNotEmpty()) CompressionEngine.load(this, uris)
+    }
+
+    private val addMoreAudio = registerForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isNotEmpty()) CompressionEngine.load(this, uris, append = true)
+    }
+
     private val notifPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
@@ -88,6 +102,7 @@ class MainActivity : AppCompatActivity() {
                                 )
                             )
                         },
+                        onPickAudio = { pickAudio.launch(AUDIO_MIME_TYPES) },
                         onAddMore = {
                             addMoreMedia.launch(
                                 PickVisualMediaRequest(
@@ -95,6 +110,7 @@ class MainActivity : AppCompatActivity() {
                                 )
                             )
                         },
+                        onAddMoreAudio = { addMoreAudio.launch(AUDIO_MIME_TYPES) },
                         onRequestAccess = { requestAllFilesAccess() }
                     )
                 }
@@ -145,10 +161,20 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
         }
     }
+
+    private companion object {
+        val AUDIO_MIME_TYPES = arrayOf("audio/*")
+    }
 }
 
 @Composable
-private fun Root(onPick: () -> Unit, onAddMore: () -> Unit, onRequestAccess: () -> Unit) {
+private fun Root(
+    onPick: () -> Unit,
+    onPickAudio: () -> Unit,
+    onAddMore: () -> Unit,
+    onAddMoreAudio: () -> Unit,
+    onRequestAccess: () -> Unit
+) {
     val context = LocalContext.current
     val state by CompressionEngine.state.collectAsState()
     val pendingExternal by CompressionEngine.pendingExternal.collectAsState()
@@ -181,14 +207,18 @@ private fun Root(onPick: () -> Unit, onAddMore: () -> Unit, onRequestAccess: () 
         showSettings -> SettingsScreen(onBack = { showSettings = false })
         state.phase == Phase.CONFIG -> ConfigScreen(
             state = state,
-            onStart = { cfg, folderName -> CompressionEngine.start(context, cfg, folderName) },
+            onStart = { cfg, folderName, force ->
+                CompressionEngine.start(context, cfg, folderName, force)
+            },
             onDiscard = { CompressionEngine.discard() },
-            onAddMore = onAddMore
+            onAddMore = onAddMore,
+            onAddMoreAudio = onAddMoreAudio
         )
         state.phase == Phase.RUNNING -> ProgressScreen(state, onCancel = { CompressionEngine.cancel() })
         state.phase == Phase.DONE -> ResultScreen(state, onDone = { CompressionEngine.discard() })
         else -> HomeScreen(
             onPick = onPick,
+            onPickAudio = onPickAudio,
             onSettings = { showSettings = true },
             onRequestAccess = onRequestAccess
         )

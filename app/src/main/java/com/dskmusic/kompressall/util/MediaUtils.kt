@@ -5,6 +5,8 @@ import android.content.ContentValues
 import android.content.Context
 import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import com.dskmusic.kompressall.model.MediaEntry
@@ -64,6 +66,7 @@ object MediaUtils {
             // se prueba en último lugar.
             val id = uri.pathSegments.lastOrNull { seg -> seg.isNotEmpty() && seg.all { it.isDigit() } }
                 ?.toLongOrNull()
+                ?: documentIdNumber(uri)
             val candidates = buildList {
                 if (id != null) {
                     add(ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id))
@@ -99,6 +102,11 @@ object MediaUtils {
                 } catch (_: Exception) {
                 }
             }
+
+            // El selector de documentos (SAF) devuelve URIs sin id de MediaStore, pero su
+            // documentId sí codifica la ruta ("primary:Music/x.mp3"); con acceso total a
+            // archivos esa ruta vale, y sin ella no se podría reemplazar ni borrar el original.
+            if (realPath == null) realPath = documentPath(uri)
 
             if (name.isBlank()) name = "media_${System.currentTimeMillis()}"
             if (size <= 0) {
@@ -140,6 +148,25 @@ object MediaUtils {
             in AUDIO_EXTS -> MediaKind.AUDIO
             else -> MediaKind.IMAGE
         }
+    }
+
+    /** "primary:Music/x.mp3" -> /storage/emulated/0/Music/x.mp3 */
+    private fun documentPath(uri: Uri): String? {
+        if (uri.authority != "com.android.externalstorage.documents") return null
+        val docId = try { DocumentsContract.getDocumentId(uri) } catch (_: Exception) { return null }
+        val parts = docId.split(':', limit = 2)
+        if (parts.size != 2 || parts[1].isBlank()) return null
+        val base = if (parts[0].equals("primary", true))
+            Environment.getExternalStorageDirectory().absolutePath
+        else
+            "/storage/${parts[0]}"
+        return File(base, parts[1]).takeIf { it.exists() }?.absolutePath
+    }
+
+    /** "audio:1234" -> 1234, para poder consultar MediaStore por id. */
+    private fun documentIdNumber(uri: Uri): Long? {
+        val docId = try { DocumentsContract.getDocumentId(uri) } catch (_: Exception) { return null }
+        return docId.substringAfterLast(':').toLongOrNull()
     }
 
     fun isSupportedMedia(name: String): Boolean {

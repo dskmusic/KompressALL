@@ -84,6 +84,7 @@ private data class PendingBackup(
 @Composable
 fun HomeScreen(
     onPick: () -> Unit,
+    onPickAudio: () -> Unit,
     onSettings: () -> Unit,
     onRequestAccess: () -> Unit
 ) {
@@ -246,14 +247,22 @@ fun HomeScreen(
             ) {
                 Text(stringResource(R.string.select_media), style = MaterialTheme.typography.titleMedium)
             }
-            if (hasAccess) {
-                // El selector del sistema no sabe de carpetas ni de audio; con acceso
-                // total a archivos podemos recorrerlas nosotros.
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
-                    onClick = { showFolderPicker = true },
-                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                    onClick = onPickAudio,
+                    modifier = Modifier.weight(1f).height(48.dp)
                 ) {
-                    Text(stringResource(R.string.select_folder))
+                    Text(stringResource(R.string.select_audio))
+                }
+                if (hasAccess) {
+                    // Con acceso total a archivos podemos recorrer la carpeta nosotros:
+                    // es la única forma de coger un álbum entero de una vez.
+                    OutlinedButton(
+                        onClick = { showFolderPicker = true },
+                        modifier = Modifier.weight(1f).height(48.dp)
+                    ) {
+                        Text(stringResource(R.string.select_folder))
+                    }
                 }
             }
             if (showFolderPicker) {

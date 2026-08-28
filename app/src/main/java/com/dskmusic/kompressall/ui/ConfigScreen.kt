@@ -31,6 +31,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,15 +61,17 @@ private val DEFAULT_CONFIG = JobConfig()
 @Composable
 fun ConfigScreen(
     state: EngineState,
-    onStart: (JobConfig, String) -> Unit,
+    onStart: (JobConfig, String, Boolean) -> Unit,
     onDiscard: () -> Unit,
-    onAddMore: () -> Unit
+    onAddMore: () -> Unit,
+    onAddMoreAudio: () -> Unit
 ) {
     val context = LocalContext.current
     var cfg by remember { mutableStateOf(Settings.loadConfig()) }
     var showDeleteWarning by remember { mutableStateOf(false) }
     var showFolderPicker by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<MediaEntry?>(null) }
+    val spaceWarning by CompressionEngine.spaceWarning.collectAsState()
     val update: (JobConfig) -> Unit = { cfg = it; Settings.saveConfig(it) }
     var folderName by remember(state.folderSuggestion) { mutableStateOf(state.folderSuggestion) }
     val av1Available = remember { VideoCompressor.hasEncoder(MimeTypes.VIDEO_AV1) }
@@ -161,6 +164,9 @@ fun ConfigScreen(
             ) {
                 TextButton(onClick = { showFolderPicker = true }) {
                     Text(stringResource(R.string.add_folder))
+                }
+                TextButton(onClick = onAddMoreAudio) {
+                    Text(stringResource(R.string.add_audio))
                 }
                 TextButton(onClick = onAddMore) {
                     Text(stringResource(R.string.add_more))
@@ -354,7 +360,7 @@ fun ConfigScreen(
                         )
                     }
                 } else {
-                    onStart(cfg, folderName)
+                    onStart(cfg, folderName, false)
                 }
             },
             modifier = Modifier.fillMaxWidth().height(56.dp)
@@ -366,6 +372,32 @@ fun ConfigScreen(
         }
         Spacer(Modifier.height(4.dp))
         Footer(Modifier.align(Alignment.CenterHorizontally))
+    }
+
+    spaceWarning?.let { (needed, free) ->
+        AlertDialog(
+            onDismissRequest = { CompressionEngine.spaceWarning.value = null },
+            title = { Text(stringResource(R.string.low_space_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.low_space_text,
+                        formatSize(needed), formatSize(free)
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    CompressionEngine.spaceWarning.value = null
+                    onStart(cfg, folderName, true)
+                }) { Text(stringResource(R.string.low_space_continue)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { CompressionEngine.spaceWarning.value = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 
     editing?.let { entry ->

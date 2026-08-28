@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.MediaCodecInfo
 import android.net.Uri
 import android.os.Environment
+import android.os.StatFs
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import com.dskmusic.kompressall.CompressionService
@@ -139,6 +140,7 @@ object CompressionEngine {
     }
 
     fun discard() {
+        spaceWarning.value = null
         _state.value = EngineState()
     }
 
@@ -147,10 +149,40 @@ object CompressionEngine {
         job?.cancel()
     }
 
-    fun start(context: Context, config: JobConfig, folderName: String) {
+    /** (bytes necesarios, bytes libres) cuando el lote no cabe. La UI decide si seguir. */
+    val spaceWarning = MutableStateFlow<Pair<Long, Long>?>(null)
+
+    fun start(context: Context, config: JobConfig, folderName: String, force: Boolean = false) {
         val snapshot = _state.value
         if (snapshot.items.isEmpty() || snapshot.phase != Phase.CONFIG) return
+        if (!force) {
+            val needed = spaceNeeded(snapshot.items, config)
+            val free = freeSpace()
+            if (free in 0 until needed) {
+                spaceWarning.value = needed to free
+                return
+            }
+        }
+        spaceWarning.value = null
         runJob(context, snapshot.items, config, folderName.trim().ifBlank { snapshot.folderSuggestion })
+    }
+
+    /**
+     * Peor caso: un archivo comprimido nunca acaba ocupando más que el original (si le
+     * saliera mayor se conserva el original), así que el lote entero cabe en su propio
+     * tamaño; más la copia de seguridad si toca, más el temporal más grande de la caché.
+     */
+    private fun spaceNeeded(items: List<MediaEntry>, cfg: JobConfig): Long {
+        val total = items.sumOf { it.size }
+        val backup = if (cfg.replaceOriginals && cfg.backupOriginals) total else 0L
+        return total + backup + (items.maxOfOrNull { it.size } ?: 0L)
+    }
+
+    /** -1 si no se puede saber: en ese caso no se avisa, mejor que un falso positivo. */
+    private fun freeSpace(): Long = try {
+        StatFs(Environment.getExternalStorageDirectory().absolutePath).availableBytes
+    } catch (_: Exception) {
+        -1L
     }
 
     private fun pendingFile(context: Context) = File(context.applicationContext.filesDir, "pending_job.json")

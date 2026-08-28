@@ -8,7 +8,7 @@
     <string name="footer_dsk" translatable="false">DSK</string>
 
     <!-- Home -->
-    <string name="home_tagline">Compress your photos and videos</string>
+    <string name="home_tagline">Compress your photos, videos and audio</string>
     <string name="select_media">Select photos and videos</string>
     <string name="add_more">+ Add more</string>
     <string name="incoming_batch_title">New files received</string>
@@ -22,7 +22,7 @@
     <string name="settings">Settings</string>
     <string name="help">Help</string>
     <string name="help_title">How KompressALL works</string>
-    <string name="help_text">1. Pick photos and videos, or share/open them into the app from your camera or gallery.\n\n2. Choose a preset — High, Medium (recommended) or Max saving — for photos and for videos, or tweak everything manually with the + option.\n\n3. Pick where to save: a new dated folder, or replace the originals in place (with an optional backup).\n\n4. Tap Compress. You can minimize the app — a notification keeps you posted and lets you cancel anytime.\n\n5. Check the before/after summary and share the results straight from there if you like.</string>
+    <string name="help_text">1. Pick photos and videos, audio files, or a whole folder at once. You can also share/open files into the app from your camera, gallery or music player.\n\n2. Choose a preset — High, Medium (recommended) or Max saving — for photos, videos and audio, or tweak everything manually with the + option.\n\n3. Pick where to save: a new dated folder, or replace the originals in place (with an optional backup).\n\n4. Tap Compress. You can minimize the app — a notification keeps you posted and lets you cancel anytime.\n\n5. Check the before/after summary and share the results straight from there if you like.</string>
     <string name="help_got_it">Got it</string>
     <string name="update_available_title">Update available</string>
     <string name="update_available_text">Version %1$s is available. Download and install it?</string>
@@ -56,7 +56,7 @@
     <string name="auto_sync_done_title">Auto sync finished</string>
     <string name="auto_sync_section">Automatic sync</string>
     <string name="auto_sync_enable">Enable automatic sync</string>
-    <string name="auto_sync_enable_desc">Periodically checks the folders below and compresses new photos/videos on its own, without opening the app.</string>
+    <string name="auto_sync_enable_desc">Periodically checks the folders below and compresses new photos, videos and audio on its own, without opening the app.</string>
     <string name="auto_sync_folders">Watched folders</string>
     <string name="auto_sync_no_folders">No folders added yet</string>
     <string name="auto_sync_add_folder">Add folder</string>
@@ -143,7 +143,7 @@
     <string name="estimated_size_fmt">Estimated final size: ~%1$s</string>
     <string name="destination">Destination</string>
     <string name="dest_new_folder">New folder</string>
-    <string name="dest_new_folder_desc">Saves to KompressALL/, videos in a Videos/ subfolder</string>
+    <string name="dest_new_folder_desc">Saves to KompressALL/, videos in Videos/ and audio in Audio/</string>
     <string name="folder_name_label">Folder name</string>
     <string name="folder_name_hint">e.g. 20270723 Beach day</string>
     <string name="dest_replace">Replace originals</string>
@@ -243,4 +243,12 @@
     <string name="video_edit_range_fmt">From %1$s to %2$s</string>
     <string name="video_edit_no_duration">Could not read this video\'s duration; you can still rotate it.</string>
     <string name="rotation_label">Rotation</string>
+    <string name="select_audio">Audio files</string>
+    <string name="add_audio">+ Audio</string>
+    <string name="trim_start">Start</string>
+    <string name="trim_end">End</string>
+    <string name="trim_duration_fmt">Selected: %1$s of %2$s</string>
+    <string name="low_space_title">Not enough free space</string>
+    <string name="low_space_text">This batch may need up to %1$s and only %2$s are free. If the storage fills up mid-way, some files will fail.</string>
+    <string name="low_space_continue">Compress anyway</string>
 </resources>
