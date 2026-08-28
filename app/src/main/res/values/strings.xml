@@ -10,7 +10,7 @@
     <!-- Home -->
     <string name="home_tagline">Compress your photos, videos and audio</string>
     <string name="select_media">Select photos and videos</string>
-    <string name="add_more">+ Add more</string>
+    <string name="add_more">+ More</string>
     <string name="incoming_batch_title">New files received</string>
     <string name="incoming_batch_text">You already have files pending. Do you want to add these to the current batch or start a new one?</string>
     <string name="incoming_add_to_batch">Add to batch</string>
@@ -238,7 +238,7 @@
     <string name="remove_from_batch">Remove from batch</string>
     <string name="bitrate_label">Bitrate (kbps)</string>
     <string name="select_folder">Folder</string>
-    <string name="add_folder">+ Add folder</string>
+    <string name="add_folder">+ Folder</string>
     <string name="video_edit_title">Trim and rotate</string>
     <string name="video_edit_range_fmt">From %1$s to %2$s</string>
     <string name="video_edit_no_duration">Could not read this video\'s duration; you can still rotate it.</string>
@@ -251,4 +251,6 @@
     <string name="low_space_title">Not enough free space</string>
     <string name="low_space_text">This batch may need up to %1$s and only %2$s are free. If the storage fills up mid-way, some files will fail.</string>
     <string name="low_space_continue">Compress anyway</string>
+    <string name="mirror_label">Mirror</string>
+    <string name="mirror_desc">Flips it horizontally, for front camera recordings</string>
 </resources>

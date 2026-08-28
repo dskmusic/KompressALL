@@ -240,12 +240,17 @@ object VideoCompressor {
                 val effectsList = mutableListOf<Effect>()
                 // El giro va primero: la resolución de salida se calcula sobre el vídeo
                 // ya girado, así que Presentation tiene que verlo en su orientación final.
-                if (edit.rotationDegrees != 0) {
+                if (edit.rotationDegrees != 0 || edit.mirrored) {
                     // ScaleAndRotateTransformation gira en sentido antihorario; el usuario
                     // elige grados en sentido horario, como el botón de girar de una galería.
                     val ccw = ((360 - edit.rotationDegrees) % 360).toFloat()
+                    // Escala negativa en X = volteo horizontal, y se aplica antes que el
+                    // giro (Matrix.postScale y luego postRotate), igual que en la vista previa.
                     effectsList.add(
-                        ScaleAndRotateTransformation.Builder().setRotationDegrees(ccw).build()
+                        ScaleAndRotateTransformation.Builder()
+                            .setScale(if (edit.mirrored) -1f else 1f, 1f)
+                            .setRotationDegrees(ccw)
+                            .build()
                     )
                 }
                 if (outDisplayHeight > 0) {

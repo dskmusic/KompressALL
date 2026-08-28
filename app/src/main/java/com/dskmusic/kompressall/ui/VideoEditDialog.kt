@@ -105,12 +105,12 @@ fun VideoEditDialog(
                     else -> {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FramePreview(
-                                entry.uri, startMs, edit.rotationDegrees,
+                                entry.uri, startMs, edit.rotationDegrees, edit.mirrored,
                                 stringResource(R.string.trim_start),
                                 Modifier.weight(1f)
                             )
                             FramePreview(
-                                entry.uri, endMs, edit.rotationDegrees,
+                                entry.uri, endMs, edit.rotationDegrees, edit.mirrored,
                                 stringResource(R.string.trim_end),
                                 Modifier.weight(1f)
                             )
@@ -179,6 +179,11 @@ fun VideoEditDialog(
                     listOf("0°" to 0, "90°" to 90, "180°" to 180, "270°" to 270),
                     edit.rotationDegrees
                 ) { edit = edit.copy(rotationDegrees = it) }
+                LabeledSwitch(
+                    title = stringResource(R.string.mirror_label),
+                    description = stringResource(R.string.mirror_desc),
+                    checked = edit.mirrored
+                ) { edit = edit.copy(mirrored = it) }
                 TextButton(onClick = {
                     edit = VideoEdit()
                     startText = formatPrecise(0)
@@ -205,6 +210,7 @@ private fun FramePreview(
     uri: Uri,
     positionMs: Long,
     rotationDegrees: Int,
+    mirrored: Boolean,
     label: String,
     modifier: Modifier = Modifier
 ) {
@@ -248,7 +254,11 @@ private fun FramePreview(
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .fillMaxSize()
-                        .graphicsLayer { rotationZ = rotationDegrees.toFloat() }
+                        .graphicsLayer {
+                            // El volteo va antes que el giro, igual que en la exportación.
+                            scaleX = if (mirrored) -1f else 1f
+                            rotationZ = rotationDegrees.toFloat()
+                        }
                 )
             } ?: CircularProgressIndicator()
         }

@@ -13,9 +13,11 @@ data class VideoEdit(
     /** 0 = hasta el final del vídeo. */
     val endMs: Long = 0,
     /** Giro horario adicional, en grados: 0, 90, 180 o 270. */
-    val rotationDegrees: Int = 0
+    val rotationDegrees: Int = 0,
+    /** Volteo horizontal, para lo grabado con la cámara frontal. */
+    val mirrored: Boolean = false
 ) {
-    val isSet: Boolean get() = startMs > 0 || endMs > 0 || rotationDegrees != 0
+    val isSet: Boolean get() = startMs > 0 || endMs > 0 || rotationDegrees != 0 || mirrored
     val swapsSides: Boolean get() = rotationDegrees == 90 || rotationDegrees == 270
 }
 
