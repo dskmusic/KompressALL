@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.Effect
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.Clock
@@ -17,6 +18,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.FrameDropEffect
 import androidx.media3.effect.Presentation
 import androidx.media3.transformer.AudioEncoderSettings
+import androidx.media3.transformer.Codec
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultAssetLoaderFactory
 import androidx.media3.transformer.DefaultDecoderFactory
@@ -124,6 +126,26 @@ object VideoCompressor {
     }
 
     /**
+     * Media3 1.5.0 copia el `codecs` del vídeo de ENTRADA al Format que le pide al encoder, aunque
+     * el mime de salida sea otro (VideoSampleExporter.EncoderWrapper.getSurfaceInfo lo hace con un
+     * setCodecs(inputFormat.codecs) literal). DefaultEncoderFactory lo pasa a MediaFormatUtil, que
+     * lo mete como "codecs-string" en el MediaFormat, y MediaCodec revienta al configurar un
+     * encoder video/avc al que le llega codecs-string=hvc1.x (o al revés). Lo limpiamos aquí:
+     * el codecs de la entrada no aporta nada al configurar la salida.
+     */
+    private class StripCodecsEncoderFactory(
+        private val delegate: Codec.EncoderFactory
+    ) : Codec.EncoderFactory {
+        private fun Format.withoutCodecs() = buildUpon().setCodecs(null).build()
+        override fun createForAudioEncoding(format: Format): Codec =
+            delegate.createForAudioEncoding(format.withoutCodecs())
+        override fun createForVideoEncoding(format: Format): Codec =
+            delegate.createForVideoEncoding(format.withoutCodecs())
+        override fun audioNeedsEncoding(): Boolean = delegate.audioNeedsEncoding()
+        override fun videoNeedsEncoding(): Boolean = delegate.videoNeedsEncoding()
+    }
+
+    /**
      * Transcodifica [uri] a [outFile]. Devuelve null si tuvo éxito o un mensaje de error.
      * Cancelable: al cancelar la corrutina se cancela el Transformer.
      */
@@ -164,7 +186,7 @@ object VideoCompressor {
                 if (!audioPassthrough) transformerBuilder.setAudioMimeType(MimeTypes.AUDIO_AAC)
                 val transformer = transformerBuilder
                     .setAssetLoaderFactory(DefaultAssetLoaderFactory(context, decoderFactory, Clock.DEFAULT))
-                    .setEncoderFactory(encoderFactoryBuilder.build())
+                    .setEncoderFactory(StripCodecsEncoderFactory(encoderFactoryBuilder.build()))
                     .addListener(object : Transformer.Listener {
                         override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                             if (cont.isActive) cont.resume(null)
