@@ -72,6 +72,14 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- La sincronización automática corre en primer plano desde un Worker, y
+             WorkManager no usa nuestros servicios sino el suyo: el tipo hay que
+             declararlo aquí o Android 14+ rechaza el setForeground(). -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
+
         <!-- Necesario para compartir los archivos comprimidos con otras apps -->
         <provider
             android:name="androidx.core.content.FileProvider"
