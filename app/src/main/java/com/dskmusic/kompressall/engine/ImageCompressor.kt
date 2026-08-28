@@ -3,9 +3,14 @@ package com.dskmusic.kompressall.engine
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
+import android.graphics.Paint
 import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
+import com.dskmusic.kompressall.model.MediaEdit
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
@@ -22,7 +27,8 @@ object ImageCompressor {
         uri: Uri,
         format: String,          // "jpeg" | "webp" | "png"
         quality: Int,            // 1..100
-        resolutionScale: Float   // 0..1
+        resolutionScale: Float,  // 0..1
+        edit: MediaEdit = MediaEdit()
     ): ByteArray? {
         return try {
             val originalBytes = context.contentResolver
@@ -43,6 +49,10 @@ object ImageCompressor {
 
             var bitmap = decodeWithFallback(originalBytes, sampleSize) ?: return null
             bitmap = fixOrientation(exifData, bitmap)
+            // Las ediciones van antes de escalar: así el porcentaje de resolución se
+            // aplica sobre lo que el usuario ve recortado, no sobre la foto entera.
+            val edited = applyEdit(bitmap, edit)
+            if (edited !== bitmap) { bitmap.recycle(); bitmap = edited }
 
             if (scale < 0.999f) {
                 val newW = (bitmap.width * scale).toInt().coerceAtLeast(1)
@@ -70,6 +80,86 @@ object ImageCompressor {
         } catch (e: Exception) {
             null
         }
+    }
+
+    /** Bitmap ya orientado y reducido, con el tamaño real del original detrás. */
+    internal class Preview(val bitmap: Bitmap, val width: Int, val height: Int)
+
+    /**
+     * Carga para la vista previa del editor: reducida a [maxSize] y con la orientación
+     * EXIF ya aplicada, que es el punto exacto en el que arranca [applyEdit] al comprimir.
+     */
+    internal fun decodePreview(context: Context, uri: Uri, maxSize: Int): Preview? = try {
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        if (bytes == null) null else {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            val exifData = readExif(context, uri)
+            val sample = calculateInSampleSize(bounds.outWidth, bounds.outHeight, maxSize, maxSize)
+            decodeWithFallback(bytes, sample)?.let { raw ->
+                val fixed = fixOrientation(exifData, raw)
+                // El giro EXIF puede intercambiar los lados, y el diálogo enseña el tamaño
+                // que tendrá el archivo, no el que dicen las cabeceras.
+                val swap = fixed.width > fixed.height != bounds.outWidth > bounds.outHeight
+                Preview(
+                    fixed,
+                    if (swap) bounds.outHeight else bounds.outWidth,
+                    if (swap) bounds.outWidth else bounds.outHeight
+                )
+            }
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
+     * Giro, volteo, recorte y ajustes elegidos en el diálogo de edición. Nunca recicla
+     * [source] (la vista previa reutiliza el mismo bitmap en cada cambio); sí los pasos
+     * intermedios que crea por el camino.
+     */
+    internal fun applyEdit(source: Bitmap, edit: MediaEdit): Bitmap {
+        var bmp = source
+        fun swap(next: Bitmap) {
+            if (next === bmp) return
+            if (bmp !== source) bmp.recycle()
+            bmp = next
+        }
+        if (edit.rotationDegrees != 0 || edit.mirrored) {
+            val m = Matrix()
+            // Volteo antes que giro, el mismo orden que en el vídeo y en la vista previa.
+            if (edit.mirrored) m.postScale(-1f, 1f)
+            if (edit.rotationDegrees != 0) m.postRotate(edit.rotationDegrees.toFloat())
+            swap(Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true))
+        }
+        if (edit.isCropped) {
+            val x = (edit.cropLeft * bmp.width).toInt().coerceIn(0, bmp.width - 1)
+            val y = (edit.cropTop * bmp.height).toInt().coerceIn(0, bmp.height - 1)
+            val w = ((edit.cropRight - edit.cropLeft) * bmp.width).toInt().coerceIn(1, bmp.width - x)
+            val h = ((edit.cropBottom - edit.cropTop) * bmp.height).toInt().coerceIn(1, bmp.height - y)
+            swap(Bitmap.createBitmap(bmp, x, y, w, h))
+        }
+        if (edit.isAdjusted) {
+            val cm = ColorMatrix()
+            if (edit.saturation != 0) cm.setSaturation(1f + edit.saturation / 100f)
+            if (edit.contrast != 0 || edit.brightness != 0) {
+                val c = 1f + edit.contrast / 100f
+                // El contraste pivota sobre el gris medio; si no, subirlo aclara la foto.
+                val t = 127.5f * (1f - c) + edit.brightness * 1.27f
+                cm.postConcat(ColorMatrix(floatArrayOf(
+                    c, 0f, 0f, 0f, t,
+                    0f, c, 0f, 0f, t,
+                    0f, 0f, c, 0f, t,
+                    0f, 0f, 0f, 1f, 0f
+                )))
+            }
+            val out = Bitmap.createBitmap(bmp.width, bmp.height, Bitmap.Config.ARGB_8888)
+            Canvas(out).drawBitmap(bmp, 0f, 0f, Paint().apply {
+                isFilterBitmap = true
+                colorFilter = ColorMatrixColorFilter(cm)
+            })
+            swap(out)
+        }
+        return bmp
     }
 
     private fun readExif(context: Context, uri: Uri): Map<String, String> {

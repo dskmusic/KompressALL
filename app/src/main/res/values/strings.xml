@@ -253,4 +253,15 @@
     <string name="low_space_continue">Compress anyway</string>
     <string name="mirror_label">Mirror</string>
     <string name="mirror_desc">Flips it horizontally, for front camera recordings</string>
+    <string name="edit_media">Edit</string>
+    <string name="edit_hint">Tap a thumbnail to trim, rotate or adjust it.</string>
+    <string name="photo_edit_title">Crop, rotate and adjust</string>
+    <string name="audio_edit_title">Trim audio</string>
+    <string name="audio_edit_no_duration">Could not read this audio\'s duration.</string>
+    <string name="crop_h_label">Horizontal crop</string>
+    <string name="crop_v_label">Vertical crop</string>
+    <string name="crop_size_fmt">Result: %1$d × %2$d px</string>
+    <string name="brightness_label">Brightness</string>
+    <string name="contrast_label">Contrast</string>
+    <string name="saturation_label">Saturation</string>
 </resources>

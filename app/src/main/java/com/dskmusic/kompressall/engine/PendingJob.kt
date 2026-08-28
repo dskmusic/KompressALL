@@ -5,7 +5,7 @@ import com.dskmusic.kompressall.model.JobConfig
 import com.dskmusic.kompressall.model.MediaEntry
 import com.dskmusic.kompressall.model.MediaKind
 import com.dskmusic.kompressall.model.Preset
-import com.dskmusic.kompressall.model.VideoEdit
+import com.dskmusic.kompressall.model.MediaEdit
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -81,7 +81,7 @@ fun parsePendingJob(text: String): PendingJob? {
                 kind = kind,
                 dateMillis = o.getLong("dateMillis"),
                 realPath = if (o.isNull("realPath")) null else o.getString("realPath"),
-                edit = VideoEdit(
+                edit = MediaEdit(
                     startMs = o.optLong("trimStartMs"),
                     endMs = o.optLong("trimEndMs"),
                     rotationDegrees = o.optInt("rotationDegrees")

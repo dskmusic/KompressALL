@@ -250,4 +250,15 @@
     <string name="low_space_continue">Comprimir igualmente</string>
     <string name="mirror_label">Reflejar</string>
     <string name="mirror_desc">Lo voltea horizontalmente, para grabaciones con la cámara frontal</string>
+    <string name="edit_media">Editar</string>
+    <string name="edit_hint">Toca una miniatura para recortarla, girarla o ajustarla.</string>
+    <string name="photo_edit_title">Recortar, girar y ajustar</string>
+    <string name="audio_edit_title">Recortar audio</string>
+    <string name="audio_edit_no_duration">No se ha podido leer la duración de este audio.</string>
+    <string name="crop_h_label">Recorte horizontal</string>
+    <string name="crop_v_label">Recorte vertical</string>
+    <string name="crop_size_fmt">Resultado: %1$d × %2$d px</string>
+    <string name="brightness_label">Brillo</string>
+    <string name="contrast_label">Contraste</string>
+    <string name="saturation_label">Saturación</string>
 </resources>

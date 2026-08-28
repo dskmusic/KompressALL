@@ -17,6 +17,7 @@ import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
+import com.dskmusic.kompressall.model.MediaEdit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -58,6 +59,7 @@ object AudioCompressor {
         uri: Uri,
         outFile: File,
         bitrate: Int,
+        edit: MediaEdit,
         onProgress: (Float) -> Unit
     ): String? = withContext(Dispatchers.Main) {
         suspendCancellableCoroutine<String?> { cont ->
@@ -90,7 +92,15 @@ object AudioCompressor {
                     })
                     .build()
 
-                val editedMediaItem = EditedMediaItem.Builder(MediaItem.fromUri(uri))
+                val mediaItemBuilder = MediaItem.Builder().setUri(uri)
+                if (edit.startMs > 0 || edit.endMs > 0) {
+                    val clipping = MediaItem.ClippingConfiguration.Builder()
+                        .setStartPositionMs(edit.startMs)
+                    // endMs == 0 significa "hasta el final": no se fija posición de fin.
+                    if (edit.endMs > edit.startMs) clipping.setEndPositionMs(edit.endMs)
+                    mediaItemBuilder.setClippingConfiguration(clipping.build())
+                }
+                val editedMediaItem = EditedMediaItem.Builder(mediaItemBuilder.build())
                     .setRemoveVideo(true)
                     .build()
 

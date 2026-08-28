@@ -8,16 +8,30 @@ enum class MediaKind { IMAGE, VIDEO, AUDIO }
 
 /** Recorte y giro aplicados a un vídeo antes de comprimir; solo se editan desde
  *  la pantalla de configuración, tocando su miniatura. Valores por defecto = sin tocar. */
-data class VideoEdit(
+data class MediaEdit(
     val startMs: Long = 0,
     /** 0 = hasta el final del vídeo. */
     val endMs: Long = 0,
     /** Giro horario adicional, en grados: 0, 90, 180 o 270. */
     val rotationDegrees: Int = 0,
     /** Volteo horizontal, para lo grabado con la cámara frontal. */
-    val mirrored: Boolean = false
+    val mirrored: Boolean = false,
+    /** Recorte de la foto en fracciones del original, ya girado. */
+    val cropLeft: Float = 0f,
+    val cropTop: Float = 0f,
+    val cropRight: Float = 1f,
+    val cropBottom: Float = 1f,
+    /** Ajustes de la foto, de -100 a 100; 0 = sin tocar. */
+    val brightness: Int = 0,
+    val contrast: Int = 0,
+    val saturation: Int = 0
 ) {
-    val isSet: Boolean get() = startMs > 0 || endMs > 0 || rotationDegrees != 0 || mirrored
+    val isCropped: Boolean
+        get() = cropLeft > 0f || cropTop > 0f || cropRight < 1f || cropBottom < 1f
+    val isAdjusted: Boolean get() = brightness != 0 || contrast != 0 || saturation != 0
+    val isSet: Boolean
+        get() = startMs > 0 || endMs > 0 || rotationDegrees != 0 || mirrored ||
+            isCropped || isAdjusted
     val swapsSides: Boolean get() = rotationDegrees == 90 || rotationDegrees == 270
 }
 
@@ -30,7 +44,7 @@ data class MediaEntry(
     val dateMillis: Long,
     /** Ruta física real (via MediaStore DATA). Necesaria para reemplazar/borrar originales. */
     val realPath: String?,
-    val edit: VideoEdit = VideoEdit()
+    val edit: MediaEdit = MediaEdit()
 ) {
     val isVideo: Boolean get() = kind == MediaKind.VIDEO
     val isAudio: Boolean get() = kind == MediaKind.AUDIO

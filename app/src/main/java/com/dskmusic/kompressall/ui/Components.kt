@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -75,7 +76,8 @@ fun Footer(modifier: Modifier = Modifier) {
 
 /**
  * Miniatura de foto, vídeo o audio. Con [onRemove] muestra un aspa para sacar el
- * archivo del lote; con [onClick] el propio recuadro es pulsable (recorte de vídeo).
+ * archivo del lote; con [onClick] el propio recuadro es pulsable y enseña un lápiz,
+ * que si no nadie adivina que la miniatura abre el editor.
  */
 @Composable
 fun MediaThumb(
@@ -128,7 +130,21 @@ fun MediaThumb(
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
-            if (entry.isVideo && entry.edit.isSet) {
+            if (onClick != null) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = androidx.compose.ui.res.stringResource(R.string.edit_media),
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(3.dp)
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f))
+                        .padding(2.dp)
+                )
+            }
+            if (entry.edit.isSet) {
                 Box(
                     Modifier
                         .align(Alignment.BottomCenter)

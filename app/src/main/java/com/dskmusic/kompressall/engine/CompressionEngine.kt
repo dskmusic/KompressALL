@@ -16,7 +16,7 @@ import com.dskmusic.kompressall.model.MediaEntry
 import com.dskmusic.kompressall.model.MediaKind
 import com.dskmusic.kompressall.model.Phase
 import com.dskmusic.kompressall.model.Preset
-import com.dskmusic.kompressall.model.VideoEdit
+import com.dskmusic.kompressall.model.MediaEdit
 import com.dskmusic.kompressall.util.MediaUtils
 import com.dskmusic.kompressall.util.sourceUri
 import kotlinx.coroutines.CancellationException
@@ -132,7 +132,7 @@ object CompressionEngine {
     }
 
     /** Guarda el recorte/giro elegido para un vídeo concreto del lote. */
-    fun updateEdit(uri: Uri, edit: VideoEdit) {
+    fun updateEdit(uri: Uri, edit: MediaEdit) {
         _state.update { current ->
             if (current.phase != Phase.CONFIG) return@update current
             current.copy(items = current.items.map { if (it.uri == uri) it.copy(edit = edit) else it })
@@ -283,7 +283,9 @@ object CompressionEngine {
         ctx: Context, item: MediaEntry, cfg: JobConfig, destDir: File, backupDir: File
     ): ItemResult {
         val minSize = Settings.minSizeToCompressBytes
-        if (minSize > 0 && item.size < minSize) {
+        // Con ediciones pendientes hay que procesar aunque la foto sea pequeña: si no,
+        // se guardaría el original y el recorte del usuario se perdería.
+        if (minSize > 0 && item.size < minSize && !item.edit.isSet) {
             return finishImage(ctx, item, cfg, destDir, backupDir, kept = true, outName = item.name, bytes = null)
         }
         val (format, quality, scale) = when (cfg.imagePreset) {
@@ -292,11 +294,12 @@ object CompressionEngine {
             Preset.LOW    -> Triple("jpeg", 45, 0.5f)
             Preset.MANUAL -> Triple(cfg.imageFormat, cfg.imageQuality, cfg.imageResolutionPct / 100f)
         }
-        val bytes = ImageCompressor.compress(ctx, item.sourceUri(), format, quality, scale)
+        val bytes = ImageCompressor.compress(ctx, item.sourceUri(), format, quality, scale, item.edit)
             ?: return ItemResult(item.name, false, item.size, 0, false, error = "decode")
 
-        // Si el resultado es mayor que el original, conservar el original
-        val kept = bytes.size >= item.size
+        // Si el resultado es mayor que el original, conservar el original. Con ediciones
+        // no aplica: descartar la salida tiraría el trabajo del usuario.
+        val kept = !item.edit.isSet && bytes.size >= item.size
         val base = item.name.substringBeforeLast('.')
         val ext = if (kept) item.name.substringAfterLast('.', "jpg").lowercase()
         else if (format == "jpeg") "jpg" else format
@@ -346,7 +349,9 @@ object CompressionEngine {
         ctx: Context, item: MediaEntry, cfg: JobConfig, audioDir: File, backupDir: File
     ): ItemResult {
         val minSize = Settings.minSizeToCompressBytes
-        if (minSize > 0 && item.size < minSize) {
+        // Un audio recortado siempre pasa por el transcodificador, aunque sea pequeño:
+        // si no, se perdería el recorte que ha pedido el usuario.
+        if (minSize > 0 && item.size < minSize && !item.edit.isSet) {
             return placeTranscoded(ctx, item, cfg, audioDir, backupDir, item.name, null)
         }
         val targetKbps = when (cfg.audioPreset) {
@@ -356,13 +361,13 @@ object CompressionEngine {
         // Recodificar un archivo que ya viene por debajo del objetivo solo pierde calidad
         // sin ganar espacio, así que se conserva tal cual.
         val meta = AudioCompressor.readMeta(ctx, item.sourceUri())
-        if (meta != null && meta.bitrate in 1..(targetKbps * 1000)) {
+        if (meta != null && meta.bitrate in 1..(targetKbps * 1000) && !item.edit.isSet) {
             return placeTranscoded(ctx, item, cfg, audioDir, backupDir, item.name, null)
         }
 
         val cache = File(ctx.cacheDir, "ka_${System.currentTimeMillis()}.m4a")
         try {
-            val err = AudioCompressor.transcode(ctx, item.sourceUri(), cache, targetKbps * 1000) { p ->
+            val err = AudioCompressor.transcode(ctx, item.sourceUri(), cache, targetKbps * 1000, item.edit) { p ->
                 _state.update { s -> s.copy(fileProgress = p) }
             }
             if (err != null) return ItemResult(item.name, false, item.size, 0, false, error = err)
@@ -371,7 +376,7 @@ object CompressionEngine {
             // KB: se copian antes de comparar tamaños para no decidir sobre un tamaño
             // que aún va a crecer.
             Mp4Metadata.copyTags(ctx, item.sourceUri(), cache, item.dateMillis)
-            val kept = cache.length() >= item.size
+            val kept = !item.edit.isSet && cache.length() >= item.size
             val outName = if (kept) item.name else "${item.name.substringBeforeLast('.')}.m4a"
             return placeTranscoded(ctx, item, cfg, audioDir, backupDir, outName, if (kept) null else cache)
         } finally {

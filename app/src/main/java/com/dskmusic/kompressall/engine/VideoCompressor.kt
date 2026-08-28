@@ -30,7 +30,7 @@ import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.VideoEncoderSettings
-import com.dskmusic.kompressall.model.VideoEdit
+import com.dskmusic.kompressall.model.MediaEdit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -141,7 +141,7 @@ object VideoCompressor {
         audioBitrate: Int,       // bps
         audioPassthrough: Boolean,
         avcLevel: Int,           // 0 = dejar que Media3 elija el nivel H.264
-        edit: VideoEdit,         // recorte y giro elegidos por el usuario
+        edit: MediaEdit,         // recorte y giro elegidos por el usuario
         onProgress: (Float) -> Unit
     ): String? {
         val (message, code) = runTransform(
@@ -180,7 +180,7 @@ object VideoCompressor {
         audioBitrate: Int,
         audioPassthrough: Boolean,
         avcLevel: Int,
-        edit: VideoEdit,
+        edit: MediaEdit,
         requestCbr: Boolean,
         onProgress: (Float) -> Unit
     ): Pair<String, Int>? = withContext(Dispatchers.Main) {

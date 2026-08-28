@@ -50,6 +50,7 @@ import com.dskmusic.kompressall.engine.CompressionEngine
 import com.dskmusic.kompressall.engine.VideoCompressor
 import com.dskmusic.kompressall.model.EngineState
 import com.dskmusic.kompressall.model.JobConfig
+import com.dskmusic.kompressall.model.MediaEdit
 import com.dskmusic.kompressall.model.MediaEntry
 import com.dskmusic.kompressall.model.Preset
 import com.dskmusic.kompressall.model.formatSize
@@ -145,11 +146,16 @@ fun ConfigScreen(
                 items(state.items, key = { it.uri }) { entry ->
                     MediaThumb(
                         entry,
-                        onClick = if (entry.isVideo) ({ editing = entry }) else null,
+                        onClick = { editing = entry },
                         onRemove = { CompressionEngine.remove(entry.uri) }
                     )
                 }
             }
+            Text(
+                stringResource(R.string.edit_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Text(
                 stringResource(
                     R.string.batch_summary,
@@ -401,11 +407,13 @@ fun ConfigScreen(
     }
 
     editing?.let { entry ->
-        VideoEditDialog(
-            entry = entry,
-            onDismiss = { editing = null },
-            onConfirm = { CompressionEngine.updateEdit(entry.uri, it); editing = null }
-        )
+        val dismiss = { editing = null }
+        val confirm: (MediaEdit) -> Unit = {
+            CompressionEngine.updateEdit(entry.uri, it)
+            editing = null
+        }
+        if (entry.isVideo || entry.isAudio) MediaEditDialog(entry, dismiss, confirm)
+        else PhotoEditDialog(entry, dismiss, confirm)
     }
 
     if (showFolderPicker) {

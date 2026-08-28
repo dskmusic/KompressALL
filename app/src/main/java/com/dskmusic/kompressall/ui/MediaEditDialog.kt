@@ -42,30 +42,34 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import com.dskmusic.kompressall.R
+import com.dskmusic.kompressall.engine.AudioCompressor
 import com.dskmusic.kompressall.engine.VideoCompressor
+import com.dskmusic.kompressall.model.MediaEdit
 import com.dskmusic.kompressall.model.MediaEntry
-import com.dskmusic.kompressall.model.VideoEdit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
- * Recorte y giro de un vídeo del lote, con un fotograma de la marca de entrada y otro
- * de la de salida. No hay reproductor: solo para ver dónde caen las marcas, ExoPlayer
- * costaría más de lo que aporta, y los fotogramas se ven mientras se arrastra.
+ * Recorte de un vídeo o un audio del lote, más giro y volteo si es vídeo. El vídeo
+ * muestra un fotograma de la marca de entrada y otro de la de salida. No hay
+ * reproductor: solo sirve para ver dónde caen las marcas, ExoPlayer costaría más de lo
+ * que aporta, y los fotogramas se ven mientras se arrastra.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
-fun VideoEditDialog(
+fun MediaEditDialog(
     entry: MediaEntry,
     onDismiss: () -> Unit,
-    onConfirm: (VideoEdit) -> Unit
+    onConfirm: (MediaEdit) -> Unit
 ) {
     val context = LocalContext.current
+    val isVideo = entry.isVideo
     val durationMs by produceState(initialValue = -1L, entry.uri) {
         value = withContext(Dispatchers.IO) {
-            VideoCompressor.readMeta(context, entry.uri)?.durationMs ?: 0L
+            if (isVideo) VideoCompressor.readMeta(context, entry.uri)?.durationMs ?: 0L
+            else AudioCompressor.readMeta(context, entry.uri)?.durationMs ?: 0L
         }
     }
     var edit by remember { mutableStateOf(entry.edit) }
@@ -87,7 +91,9 @@ fun VideoEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.video_edit_title)) },
+        title = {
+            Text(stringResource(if (isVideo) R.string.video_edit_title else R.string.audio_edit_title))
+        },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -100,20 +106,27 @@ fun VideoEditDialog(
                         contentAlignment = Alignment.Center
                     ) { CircularProgressIndicator() }
 
-                    durationMs == 0L -> Text(stringResource(R.string.video_edit_no_duration))
+                    durationMs == 0L -> Text(
+                        stringResource(
+                            if (isVideo) R.string.video_edit_no_duration
+                            else R.string.audio_edit_no_duration
+                        )
+                    )
 
                     else -> {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FramePreview(
-                                entry.uri, startMs, edit.rotationDegrees, edit.mirrored,
-                                stringResource(R.string.trim_start),
-                                Modifier.weight(1f)
-                            )
-                            FramePreview(
-                                entry.uri, endMs, edit.rotationDegrees, edit.mirrored,
-                                stringResource(R.string.trim_end),
-                                Modifier.weight(1f)
-                            )
+                        if (isVideo) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FramePreview(
+                                    entry.uri, startMs, edit.rotationDegrees, edit.mirrored,
+                                    stringResource(R.string.trim_start),
+                                    Modifier.weight(1f)
+                                )
+                                FramePreview(
+                                    entry.uri, endMs, edit.rotationDegrees, edit.mirrored,
+                                    stringResource(R.string.trim_end),
+                                    Modifier.weight(1f)
+                                )
+                            }
                         }
                         RangeSlider(
                             value = startMs.toFloat()..endMs.toFloat(),
@@ -123,7 +136,7 @@ fun VideoEditDialog(
                                 edit = edit.copy(
                                     startMs = s,
                                     // 0 = hasta el final: así el recorte sobrevive aunque
-                                    // el vídeo real dure un pelo más de lo medido.
+                                    // el archivo real dure un pelo más de lo medido.
                                     endMs = if (e >= durationMs - 1) 0 else e
                                 )
                                 startText = formatPrecise(s)
@@ -174,21 +187,23 @@ fun VideoEditDialog(
                         )
                     }
                 }
-                Text(
-                    stringResource(R.string.rotation_label),
-                    style = MaterialTheme.typography.labelLarge
-                )
-                ChoiceChips(
-                    listOf("0°" to 0, "90°" to 90, "180°" to 180, "270°" to 270),
-                    edit.rotationDegrees
-                ) { edit = edit.copy(rotationDegrees = it) }
-                LabeledSwitch(
-                    title = stringResource(R.string.mirror_label),
-                    description = stringResource(R.string.mirror_desc),
-                    checked = edit.mirrored
-                ) { edit = edit.copy(mirrored = it) }
+                if (isVideo) {
+                    Text(
+                        stringResource(R.string.rotation_label),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    ChoiceChips(
+                        listOf("0°" to 0, "90°" to 90, "180°" to 180, "270°" to 270),
+                        edit.rotationDegrees
+                    ) { edit = edit.copy(rotationDegrees = it) }
+                    LabeledSwitch(
+                        title = stringResource(R.string.mirror_label),
+                        description = stringResource(R.string.mirror_desc),
+                        checked = edit.mirrored
+                    ) { edit = edit.copy(mirrored = it) }
+                }
                 TextButton(onClick = {
-                    edit = VideoEdit()
+                    edit = MediaEdit()
                     startText = formatPrecise(0)
                     endText = formatPrecise(durationMs.coerceAtLeast(0))
                 }) { Text(stringResource(R.string.reset_defaults)) }
