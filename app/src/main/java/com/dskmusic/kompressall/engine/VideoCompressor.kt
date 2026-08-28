@@ -138,11 +138,12 @@ object VideoCompressor {
         srcFps: Float,
         audioBitrate: Int,       // bps
         audioPassthrough: Boolean,
+        avcLevel: Int,           // 0 = dejar que Media3 elija el nivel H.264
         onProgress: (Float) -> Unit
     ): String? {
         val (message, code) = runTransform(
             context, uri, outFile, videoMime, videoBitrate, outDisplayHeight, outFps, srcFps,
-            audioBitrate, audioPassthrough, requestCbr = true, onProgress
+            audioBitrate, audioPassthrough, avcLevel, requestCbr = true, onProgress
         ) ?: return null
 
         // findEncoderWithClosestSupportedFormat filtra los encoders por resolución, bitrate y
@@ -157,7 +158,7 @@ object VideoCompressor {
             outFile.delete()
             return runTransform(
                 context, uri, outFile, videoMime, videoBitrate, outDisplayHeight, outFps, srcFps,
-                audioBitrate, audioPassthrough, requestCbr = false, onProgress
+                audioBitrate, audioPassthrough, avcLevel, requestCbr = false, onProgress
             )?.first
         }
         return message
@@ -175,6 +176,7 @@ object VideoCompressor {
         srcFps: Float,
         audioBitrate: Int,
         audioPassthrough: Boolean,
+        avcLevel: Int,
         requestCbr: Boolean,
         onProgress: (Float) -> Unit
     ): Pair<String, Int>? = withContext(Dispatchers.Main) {
@@ -187,6 +189,14 @@ object VideoCompressor {
                     .setiFrameIntervalSeconds(2f)
                     .apply {
                         if (requestCbr) setBitrateMode(MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR)
+                        // Si no fijamos nosotros el nivel, adjustMediaFormatForH264EncoderSettings
+                        // mete el máximo que soporte el encoder. Media3 lo descarta solo si el
+                        // encoder no llega, así que pedirlo nunca hace fallar la selección.
+                        if (avcLevel != 0) {
+                            setEncodingProfileLevel(
+                                MediaCodecInfo.CodecProfileLevel.AVCProfileHigh, avcLevel
+                            )
+                        }
                     }
                     .build()
                 val encoderFactoryBuilder = DefaultEncoderFactory.Builder(context)

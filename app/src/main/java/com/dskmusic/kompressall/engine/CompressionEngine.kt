@@ -1,6 +1,7 @@
 package com.dskmusic.kompressall.engine
 
 import android.content.Context
+import android.media.MediaCodecInfo
 import android.net.Uri
 import android.os.Environment
 import androidx.media3.common.MimeTypes
@@ -360,6 +361,19 @@ object CompressionEngine {
             }
         }
 
+        // Media3 le pide al encoder H.264 su nivel máximo (findHighestSupportedEncodingLevel,
+        // que en móviles modernos es 6.0/6.2) y ese level_idc acaba en el SPS. Muchas TVs
+        // rechazan el archivo solo por eso, aunque la resolución sea baja ("archivo no
+        // compatible"). Pedimos el nivel más bajo que cubra la salida; 0 = que elija Media3.
+        val avcLevel = if (mime != MimeTypes.VIDEO_H264) 0 else {
+            val (outW, outH) = dims(outDisplayHeight)
+            when {
+                outW * outH > 1920 * 1088 -> 0
+                effFps > 30f -> MediaCodecInfo.CodecProfileLevel.AVCLevel42
+                else -> MediaCodecInfo.CodecProfileLevel.AVCLevel4
+            }
+        }
+
         val cache = File(ctx.cacheDir, "ka_${System.currentTimeMillis()}.mp4")
         try {
             if (cfg.twoPass) {
@@ -368,7 +382,7 @@ object CompressionEngine {
                 val probe = File(ctx.cacheDir, "ka_probe_${System.currentTimeMillis()}.mp4")
                 val probeErr = VideoCompressor.transcode(
                     ctx, item.sourceUri(), probe, mime, videoBitrate, outDisplayHeight,
-                    outFps, srcFps, audioBps, audioPassthrough
+                    outFps, srcFps, audioBps, audioPassthrough, avcLevel
                 ) { p -> _state.update { s -> s.copy(fileProgress = p * 0.5f) } }
                 if (probeErr == null && probe.length() > 0) {
                     videoBitrate = (videoBitrate * (targetBytes / probe.length()))
@@ -380,7 +394,7 @@ object CompressionEngine {
 
             val err = VideoCompressor.transcode(
                 ctx, item.sourceUri(), cache, mime, videoBitrate, outDisplayHeight,
-                outFps, srcFps, audioBps, audioPassthrough
+                outFps, srcFps, audioBps, audioPassthrough, avcLevel
             ) { p -> _state.update { s -> s.copy(fileProgress = p) } }
             if (err != null) {
                 return ItemResult(item.name, true, item.size, 0, false, error = err)
