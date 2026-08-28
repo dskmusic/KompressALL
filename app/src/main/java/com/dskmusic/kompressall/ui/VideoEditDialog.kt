@@ -162,6 +162,9 @@ fun VideoEditDialog(
                         }
                         Text(
                             stringResource(
+                                R.string.video_edit_range_fmt,
+                                formatPrecise(startMs), formatPrecise(endMs)
+                            ) + "\n" + stringResource(
                                 R.string.trim_duration_fmt,
                                 formatPrecise((endMs - startMs).coerceAtLeast(0)),
                                 formatPrecise(durationMs)
