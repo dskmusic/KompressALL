@@ -258,8 +258,7 @@
     <string name="photo_edit_title">Crop, rotate and adjust</string>
     <string name="audio_edit_title">Trim audio</string>
     <string name="audio_edit_no_duration">Could not read this audio\'s duration.</string>
-    <string name="crop_h_label">Horizontal crop</string>
-    <string name="crop_v_label">Vertical crop</string>
+    <string name="crop_hint">Drag inside the box to move it, or its corners to resize it.</string>
     <string name="crop_size_fmt">Result: %1$d × %2$d px</string>
     <string name="brightness_label">Brightness</string>
     <string name="contrast_label">Contrast</string>

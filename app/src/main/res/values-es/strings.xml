@@ -255,8 +255,7 @@
     <string name="photo_edit_title">Recortar, girar y ajustar</string>
     <string name="audio_edit_title">Recortar audio</string>
     <string name="audio_edit_no_duration">No se ha podido leer la duración de este audio.</string>
-    <string name="crop_h_label">Recorte horizontal</string>
-    <string name="crop_v_label">Recorte vertical</string>
+    <string name="crop_hint">Arrastra dentro del recuadro para moverlo, o sus esquinas para cambiar el tamaño.</string>
     <string name="crop_size_fmt">Resultado: %1$d × %2$d px</string>
     <string name="brightness_label">Brillo</string>
     <string name="contrast_label">Contraste</string>
