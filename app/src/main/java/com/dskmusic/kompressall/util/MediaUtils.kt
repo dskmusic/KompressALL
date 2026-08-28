@@ -1,12 +1,14 @@
 package com.dskmusic.kompressall.util
 
 import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import com.dskmusic.kompressall.model.MediaEntry
+import com.dskmusic.kompressall.model.MediaKind
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -23,6 +25,10 @@ fun MediaEntry.sourceUri(): Uri =
 
 object MediaUtils {
 
+    val IMAGE_EXTS = listOf("jpg", "jpeg", "png", "webp", "heic", "heif", "bmp")
+    val VIDEO_EXTS = listOf("mp4", "mkv", "webm", "3gp", "mov", "avi", "m4v", "ts")
+    val AUDIO_EXTS = listOf("mp3", "m4a", "aac", "wav", "flac", "ogg", "opus", "wma")
+
     /** Carga nombre, tamaño, tipo, fecha y ruta real de un URI. */
     fun loadEntry(context: Context, uri: Uri): MediaEntry? {
         try {
@@ -30,7 +36,7 @@ object MediaUtils {
                 val f = File(uri.path ?: return null)
                 if (!f.exists()) return null
                 return MediaEntry(
-                    uri, f.name, f.length(), isVideoName(f.name, null),
+                    uri, f.name, f.length(), kindOf(f.name, null),
                     bestDate(0L, f.name, f), f.absolutePath
                 )
             }
@@ -53,7 +59,7 @@ object MediaUtils {
             // El Photo Picker devuelve DATA como una ruta virtual FUSE
             // (/.transforms/synthetic/picker/...) que no es escribible ni con
             // MANAGE_EXTERNAL_STORAGE. La ruta física real solo se obtiene
-            // consultando las colecciones canónicas (Images/Video) por ID;
+            // consultando las colecciones canónicas (Images/Video/Audio) por ID;
             // MediaStore.Files puede devolver la misma ruta sintética, así que
             // se prueba en último lugar.
             val id = uri.pathSegments.lastOrNull { seg -> seg.isNotEmpty() && seg.all { it.isDigit() } }
@@ -62,6 +68,7 @@ object MediaUtils {
                 if (id != null) {
                     add(ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id))
                     add(ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id))
+                    add(ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id))
                 }
                 add(uri)
                 if (id != null) add(ContentUris.withAppendedId(MediaStore.Files.getContentUri("external"), id))
@@ -112,7 +119,7 @@ object MediaUtils {
             // La ruta física es la fuente más fiable del nombre original
             if (file != null) name = file.name
             return MediaEntry(
-                uri, name, size, isVideoName(name, mime),
+                uri, name, size, kindOf(name, mime),
                 bestDate(dateTaken, name, file), file?.absolutePath
             )
         } catch (_: Exception) {
@@ -120,11 +127,34 @@ object MediaUtils {
         }
     }
 
-    private fun isVideoName(name: String, mime: String?): Boolean {
-        if (mime != null) return mime.startsWith("video/")
+    /** Imagen, vídeo o audio, por MIME si se conoce y si no por extensión. */
+    fun kindOf(name: String, mime: String?): MediaKind {
+        if (mime != null) {
+            if (mime.startsWith("video/")) return MediaKind.VIDEO
+            if (mime.startsWith("audio/")) return MediaKind.AUDIO
+            if (mime.startsWith("image/")) return MediaKind.IMAGE
+        }
         val ext = name.substringAfterLast('.', "").lowercase()
-        return ext in listOf("mp4", "mkv", "webm", "3gp", "mov", "avi", "m4v", "ts")
+        return when (ext) {
+            in VIDEO_EXTS -> MediaKind.VIDEO
+            in AUDIO_EXTS -> MediaKind.AUDIO
+            else -> MediaKind.IMAGE
+        }
     }
+
+    fun isSupportedMedia(name: String): Boolean {
+        val ext = name.substringAfterLast('.', "").lowercase()
+        return ext in IMAGE_EXTS || ext in VIDEO_EXTS || ext in AUDIO_EXTS
+    }
+
+    /** Archivos de medios directamente dentro de [dir], sin bajar a subcarpetas: una
+     *  carpeta de cámara ya trae cientos y recorrer el árbol entero sorprende al usuario. */
+    fun listMediaInFolder(dir: File): List<Uri> =
+        dir.listFiles()
+            ?.filter { it.isFile && !it.isHidden && isSupportedMedia(it.name) }
+            ?.sortedBy { it.name.lowercase() }
+            ?.map { Uri.fromFile(it) }
+            .orEmpty()
 
     private fun bestDate(dateTaken: Long, name: String, file: File?): Long {
         if (dateTaken > 0) return dateTaken
@@ -179,10 +209,35 @@ object MediaUtils {
         return f
     }
 
-    fun scan(context: Context, paths: List<String>) {
+    /**
+     * Registra [paths] en MediaStore. Si se pasa [dateTakenPath], al terminar el escaneo
+     * de ese archivo se le escribe [dateTakenMillis] en DATE_TAKEN: la galería ordena por
+     * esa columna y ni el transcodificador de vídeo ni los formatos de imagen sin EXIF
+     * (webp/png) conservan la fecha de captura original por su cuenta.
+     */
+    fun scan(
+        context: Context,
+        paths: List<String>,
+        dateTakenPath: String? = null,
+        dateTakenMillis: Long = 0L
+    ) {
         if (paths.isEmpty()) return
         try {
-            MediaScannerConnection.scanFile(context, paths.toTypedArray(), null, null)
+            MediaScannerConnection.scanFile(context, paths.toTypedArray(), null) { scannedPath, uri ->
+                if (uri == null || dateTakenPath == null || dateTakenMillis <= 0) return@scanFile
+                if (!scannedPath.equals(dateTakenPath, ignoreCase = true)) return@scanFile
+                try {
+                    context.contentResolver.update(
+                        uri,
+                        ContentValues().apply {
+                            put(MediaStore.MediaColumns.DATE_TAKEN, dateTakenMillis)
+                            put(MediaStore.MediaColumns.DATE_MODIFIED, dateTakenMillis / 1000)
+                        },
+                        null, null
+                    )
+                } catch (_: Exception) {
+                }
+            }
         } catch (_: Exception) {
         }
     }

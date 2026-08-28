@@ -12,8 +12,10 @@ import com.dskmusic.kompressall.model.EngineState
 import com.dskmusic.kompressall.model.ItemResult
 import com.dskmusic.kompressall.model.JobConfig
 import com.dskmusic.kompressall.model.MediaEntry
+import com.dskmusic.kompressall.model.MediaKind
 import com.dskmusic.kompressall.model.Phase
 import com.dskmusic.kompressall.model.Preset
+import com.dskmusic.kompressall.model.VideoEdit
 import com.dskmusic.kompressall.util.MediaUtils
 import com.dskmusic.kompressall.util.sourceUri
 import kotlinx.coroutines.CancellationException
@@ -80,6 +82,23 @@ object CompressionEngine {
         }
     }
 
+    /** Carga de golpe todos los medios que haya sueltos en [folderPath]. El listado
+     *  del directorio también se hace fuera del hilo principal: una carpeta de cámara
+     *  puede tener miles de archivos. */
+    fun loadFolder(context: Context, folderPath: String, append: Boolean = false) {
+        val appCtx = context.applicationContext
+        isLoading.value = true
+        scope.launch {
+            val uris = try {
+                MediaUtils.listMediaInFolder(File(folderPath))
+            } catch (_: Exception) {
+                emptyList()
+            }
+            isLoading.value = false
+            if (uris.isNotEmpty()) load(appCtx, uris, append)
+        }
+    }
+
     /** Punto de entrada para contenido externo (Compartir/Abrir con). Si ya
      *  hay un lote pendiente de configurar, deja la decisión en manos de la UI. */
     fun offerExternal(context: Context, uris: List<Uri>) {
@@ -100,6 +119,23 @@ object CompressionEngine {
 
     fun dismissPendingExternal() {
         pendingExternal.value = null
+    }
+
+    /** Quita un archivo del lote antes de empezar. Si era el último, vuelve al inicio. */
+    fun remove(uri: Uri) {
+        _state.update { current ->
+            if (current.phase != Phase.CONFIG) return@update current
+            val items = current.items.filterNot { it.uri == uri }
+            if (items.isEmpty()) EngineState() else current.copy(items = items)
+        }
+    }
+
+    /** Guarda el recorte/giro elegido para un vídeo concreto del lote. */
+    fun updateEdit(uri: Uri, edit: VideoEdit) {
+        _state.update { current ->
+            if (current.phase != Phase.CONFIG) return@update current
+            current.copy(items = current.items.map { if (it.uri == uri) it.copy(edit = edit) else it })
+        }
     }
 
     fun discard() {
@@ -133,10 +169,21 @@ object CompressionEngine {
 
     fun resumePendingJob(context: Context) {
         val pending = loadPendingJob(context) ?: return
-        runJob(context, pending.items, pending.config, pending.folderName)
+        runJob(context, pending.items, pending.config, pending.folderName, pending.savedSoFar)
     }
 
-    private fun runJob(context: Context, items: List<MediaEntry>, config: JobConfig, folderName: String) {
+    /**
+     * [savedBase] son los bytes ya ahorrados en intentos anteriores de este mismo lote:
+     * el contador global solo se actualiza al terminar, así que al reanudar hay que
+     * arrastrarlos o se pierden.
+     */
+    private fun runJob(
+        context: Context,
+        items: List<MediaEntry>,
+        config: JobConfig,
+        folderName: String,
+        savedBase: Long = 0L
+    ) {
         val appCtx = context.applicationContext
         if (items.isEmpty()) return
 
@@ -151,10 +198,11 @@ object CompressionEngine {
         }
 
         job = scope.launch {
-            pendingFile(appCtx).writeText(PendingJob(items, config, dirName).toJson())
+            pendingFile(appCtx).writeText(PendingJob(items, config, dirName, savedBase).toJson())
             val root = File(Environment.getExternalStorageDirectory(), "KompressALL")
             val destDir = File(root, dirName)
             val videosDir = File(destDir, "Videos")
+            val audioDir = File(destDir, "Audio")
             val backupDir = File(File(root, "Backups"), dirName)
             val results = mutableListOf<ItemResult>()
             try {
@@ -165,8 +213,11 @@ object CompressionEngine {
                             currentName = item.name, isProbePass = false)
                     }
                     val result = try {
-                        if (item.isVideo) processVideo(appCtx, item, config, destDir, videosDir, backupDir)
-                        else processImage(appCtx, item, config, destDir, backupDir)
+                        when (item.kind) {
+                            MediaKind.VIDEO -> processVideo(appCtx, item, config, destDir, videosDir, backupDir)
+                            MediaKind.AUDIO -> processAudio(appCtx, item, config, audioDir, backupDir)
+                            MediaKind.IMAGE -> processImage(appCtx, item, config, destDir, backupDir)
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -178,11 +229,16 @@ object CompressionEngine {
                     // si la app se cierra a partir de aquí.
                     val remaining = items.drop(i + 1)
                     if (remaining.isEmpty()) pendingFile(appCtx).delete()
-                    else pendingFile(appCtx).writeText(PendingJob(remaining, config, dirName).toJson())
+                    else pendingFile(appCtx).writeText(
+                        PendingJob(
+                            remaining, config, dirName,
+                            savedBase + results.sumOf { r -> r.savedBytes }
+                        ).toJson()
+                    )
                 }
             } finally {
                 pendingFile(appCtx).delete()
-                val saved = results.sumOf { r -> r.savedBytes }
+                val saved = savedBase + results.sumOf { r -> r.savedBytes }
                 if (saved > 0) Settings.totalSaved += saved
                 _state.update { it.copy(phase = Phase.DONE, results = results.toList()) }
             }
@@ -191,7 +247,7 @@ object CompressionEngine {
 
     // ── Imagen ────────────────────────────────────────────────────────────────
 
-    private fun processImage(
+    internal fun processImage(
         ctx: Context, item: MediaEntry, cfg: JobConfig, destDir: File, backupDir: File
     ): ItemResult {
         val minSize = Settings.minSizeToCompressBytes
@@ -248,19 +304,56 @@ object CompressionEngine {
         }
         if (item.dateMillis > 0) out.setLastModified(item.dateMillis)
         touched += out.absolutePath
-        MediaUtils.scan(ctx, touched)
+        MediaUtils.scan(ctx, touched, out.absolutePath, item.dateMillis)
         return ItemResult(item.name, false, item.size, out.length(), true, keptOriginal = kept, outputPath = out.absolutePath)
+    }
+
+    // ── Audio ─────────────────────────────────────────────────────────────────
+
+    internal suspend fun processAudio(
+        ctx: Context, item: MediaEntry, cfg: JobConfig, audioDir: File, backupDir: File
+    ): ItemResult {
+        val minSize = Settings.minSizeToCompressBytes
+        if (minSize > 0 && item.size < minSize) {
+            return placeTranscoded(ctx, item, cfg, audioDir, backupDir, item.name, null)
+        }
+        val targetKbps = when (cfg.audioPreset) {
+            Preset.HIGH -> 192; Preset.MEDIUM -> 128; Preset.LOW -> 96
+            Preset.MANUAL -> cfg.audioOutKbps.coerceIn(32, 320)
+        }
+        // Recodificar un archivo que ya viene por debajo del objetivo solo pierde calidad
+        // sin ganar espacio, así que se conserva tal cual.
+        val meta = AudioCompressor.readMeta(ctx, item.sourceUri())
+        if (meta != null && meta.bitrate in 1..(targetKbps * 1000)) {
+            return placeTranscoded(ctx, item, cfg, audioDir, backupDir, item.name, null)
+        }
+
+        val cache = File(ctx.cacheDir, "ka_${System.currentTimeMillis()}.m4a")
+        try {
+            val err = AudioCompressor.transcode(ctx, item.sourceUri(), cache, targetKbps * 1000) { p ->
+                _state.update { s -> s.copy(fileProgress = p) }
+            }
+            if (err != null) return ItemResult(item.name, false, item.size, 0, false, error = err)
+
+            val kept = cache.length() >= item.size
+            val outName = if (kept) item.name else "${item.name.substringBeforeLast('.')}.m4a"
+            return placeTranscoded(ctx, item, cfg, audioDir, backupDir, outName, if (kept) null else cache)
+        } finally {
+            cache.delete()
+        }
     }
 
     // ── Vídeo ─────────────────────────────────────────────────────────────────
 
-    private suspend fun processVideo(
+    internal suspend fun processVideo(
         ctx: Context, item: MediaEntry, cfg: JobConfig,
         destDir: File, videosDir: File, backupDir: File
     ): ItemResult {
         val minSize = Settings.minSizeToCompressBytes
-        if (minSize > 0 && item.size < minSize) {
-            return finishKeptVideo(ctx, item, cfg, videosDir)
+        // Un vídeo recortado o girado siempre pasa por el transcodificador, aunque sea
+        // pequeño: si no, se perdería la edición que ha pedido el usuario.
+        if (minSize > 0 && item.size < minSize && !item.edit.isSet) {
+            return placeTranscoded(ctx, item, cfg, videosDir, backupDir, item.name, null)
         }
         val meta = VideoCompressor.readMeta(ctx, item.sourceUri())
             ?: return ItemResult(item.name, true, item.size, 0, false, error = "metadata")
@@ -291,9 +384,18 @@ object CompressionEngine {
         }
         if (!VideoCompressor.hasEncoder(mime)) mime = MimeTypes.VIDEO_H264
 
-        // Resolución de salida: el preset fija el lado corto (720p/1080p también en vertical)
-        val dispW = meta.displayWidth.coerceAtLeast(2)
-        val dispH = meta.displayHeight.coerceAtLeast(2)
+        // Recorte: el trozo que se conserva marca tanto la duración a codificar como
+        // la parte proporcional del tamaño original que sirve de objetivo.
+        val fullDurationMs = meta.durationMs.coerceAtLeast(1)
+        val clipEndMs = if (item.edit.endMs in 1..fullDurationMs) item.edit.endMs else fullDurationMs
+        val clipStartMs = item.edit.startMs.coerceIn(0, (clipEndMs - 200).coerceAtLeast(0))
+        val effDurationMs = (clipEndMs - clipStartMs).coerceAtLeast(200)
+        val durationFraction = effDurationMs.toDouble() / fullDurationMs
+
+        // Resolución de salida: el preset fija el lado corto (720p/1080p también en vertical).
+        // El giro del usuario intercambia los lados antes de decidir nada.
+        val dispW = (if (item.edit.swapsSides) meta.displayHeight else meta.displayWidth).coerceAtLeast(2)
+        val dispH = (if (item.edit.swapsSides) meta.displayWidth else meta.displayHeight).coerceAtLeast(2)
         val srcShort = minOf(dispW, dispH)
         var effShort = srcShort
         var outDisplayHeight = 0
@@ -308,8 +410,8 @@ object CompressionEngine {
         var effFps = if (outFps > 0) outFps.toFloat() else srcFps
 
         // Bitrate objetivo a partir del tamaño deseado (matemática de Kompressor)
-        val durationSec = (meta.durationMs / 1000.0).coerceAtLeast(0.1)
-        val targetBytes = (item.size * fraction.toDouble()).coerceAtLeast(100_000.0)
+        val durationSec = (effDurationMs / 1000.0).coerceAtLeast(0.1)
+        val targetBytes = (item.size * fraction.toDouble() * durationFraction).coerceAtLeast(100_000.0)
         val audioPassthrough = meta.audioMime == MimeTypes.AUDIO_AAC &&
                 meta.audioBitrate in 1..audioBps
         val effAudioBps = when {
@@ -372,6 +474,7 @@ object CompressionEngine {
             }
         }
 
+        val edit = item.edit.copy(startMs = clipStartMs, endMs = if (clipEndMs >= fullDurationMs) 0 else clipEndMs)
         val cache = File(ctx.cacheDir, "ka_${System.currentTimeMillis()}.mp4")
         try {
             if (cfg.twoPass) {
@@ -380,7 +483,7 @@ object CompressionEngine {
                 val probe = File(ctx.cacheDir, "ka_probe_${System.currentTimeMillis()}.mp4")
                 val probeErr = VideoCompressor.transcode(
                     ctx, item.sourceUri(), probe, mime, videoBitrate, outDisplayHeight,
-                    outFps, srcFps, audioBps, audioPassthrough, avcLevel
+                    outFps, srcFps, audioBps, audioPassthrough, avcLevel, edit
                 ) { p -> _state.update { s -> s.copy(fileProgress = p * 0.5f) } }
                 if (probeErr == null && probe.length() > 0) {
                     videoBitrate = (videoBitrate * (targetBytes / probe.length()))
@@ -392,68 +495,65 @@ object CompressionEngine {
 
             val err = VideoCompressor.transcode(
                 ctx, item.sourceUri(), cache, mime, videoBitrate, outDisplayHeight,
-                outFps, srcFps, audioBps, audioPassthrough, avcLevel
+                outFps, srcFps, audioBps, audioPassthrough, avcLevel, edit
             ) { p -> _state.update { s -> s.copy(fileProgress = p) } }
             if (err != null) {
                 return ItemResult(item.name, true, item.size, 0, false, error = err)
             }
 
-            // Si el resultado es mayor que el original, conservar el original
-            val kept = cache.length() >= item.size
-            val base = item.name.substringBeforeLast('.')
-            val outName = if (kept) item.name else "$base.mp4"
-            val touched = mutableListOf<String>()
-            val out: File
-
-            if (cfg.replaceOriginals && item.realPath != null) {
-                val orig = File(item.realPath)
-                if (kept) {
-                    return ItemResult(item.name, true, item.size, item.size, true, keptOriginal = true, outputPath = orig.absolutePath)
-                }
-                if (cfg.backupOriginals) {
-                    backupDir.mkdirs()
-                    val backup = MediaUtils.uniqueFile(backupDir, item.name)
-                    orig.copyTo(backup)
-                    touched += backup.absolutePath
-                }
-                out = File(orig.parentFile ?: videosDir, outName)
-                cache.copyTo(out, overwrite = true)
-                if (!out.absolutePath.equals(orig.absolutePath, ignoreCase = true) && orig.exists()) {
-                    orig.delete()
-                    touched += orig.absolutePath
-                }
-            } else {
-                videosDir.mkdirs()
-                out = MediaUtils.uniqueFile(videosDir, outName)
-                if (kept) copyOriginal(ctx, item, out) else cache.copyTo(out)
-                deleteOriginalIfWanted(cfg, item, out, touched)
-            }
-            if (item.dateMillis > 0) out.setLastModified(item.dateMillis)
-            touched += out.absolutePath
-            MediaUtils.scan(ctx, touched)
-            return ItemResult(item.name, true, item.size, out.length(), true, keptOriginal = kept, outputPath = out.absolutePath)
+            // Si el resultado es mayor que el original, conservar el original. Con recorte
+            // o giro no aplica: descartar la salida tiraría la edición del usuario.
+            val kept = !item.edit.isSet && cache.length() >= item.size
+            val outName = if (kept) item.name else "${item.name.substringBeforeLast('.')}.mp4"
+            return placeTranscoded(ctx, item, cfg, videosDir, backupDir, outName, if (kept) null else cache)
         } finally {
             cache.delete()
         }
     }
 
-    /** Vídeo por debajo del tamaño mínimo a comprimir: se conserva tal cual. */
-    private fun finishKeptVideo(ctx: Context, item: MediaEntry, cfg: JobConfig, videosDir: File): ItemResult {
-        if (cfg.replaceOriginals && item.realPath != null) {
-            return ItemResult(item.name, true, item.size, item.size, true, keptOriginal = true, outputPath = item.realPath)
-        }
+    // ── Auxiliares ────────────────────────────────────────────────────────────
+
+    /**
+     * Coloca el archivo ya transcodificado en su destino final (carpeta nueva o
+     * reemplazando el original), haciendo el backup previo si toca.
+     * [cache] a null significa "conservar el original tal cual".
+     */
+    private fun placeTranscoded(
+        ctx: Context, item: MediaEntry, cfg: JobConfig,
+        outDir: File, backupDir: File, outName: String, cache: File?
+    ): ItemResult {
+        val kept = cache == null
         val touched = mutableListOf<String>()
-        videosDir.mkdirs()
-        val out = MediaUtils.uniqueFile(videosDir, item.name)
-        copyOriginal(ctx, item, out)
-        deleteOriginalIfWanted(cfg, item, out, touched)
+        val out: File
+
+        if (cfg.replaceOriginals && item.realPath != null) {
+            val orig = File(item.realPath)
+            if (kept) {
+                return ItemResult(item.name, item.isVideo, item.size, item.size, true, keptOriginal = true, outputPath = orig.absolutePath)
+            }
+            if (cfg.backupOriginals) {
+                backupDir.mkdirs()
+                val backup = MediaUtils.uniqueFile(backupDir, item.name)
+                orig.copyTo(backup)
+                touched += backup.absolutePath
+            }
+            out = File(orig.parentFile ?: outDir, outName)
+            cache!!.copyTo(out, overwrite = true)
+            if (!out.absolutePath.equals(orig.absolutePath, ignoreCase = true) && orig.exists()) {
+                orig.delete()
+                touched += orig.absolutePath
+            }
+        } else {
+            outDir.mkdirs()
+            out = MediaUtils.uniqueFile(outDir, outName)
+            if (kept) copyOriginal(ctx, item, out) else cache!!.copyTo(out)
+            deleteOriginalIfWanted(cfg, item, out, touched)
+        }
         if (item.dateMillis > 0) out.setLastModified(item.dateMillis)
         touched += out.absolutePath
-        MediaUtils.scan(ctx, touched)
-        return ItemResult(item.name, true, item.size, out.length(), true, keptOriginal = true, outputPath = out.absolutePath)
+        MediaUtils.scan(ctx, touched, out.absolutePath, item.dateMillis)
+        return ItemResult(item.name, item.isVideo, item.size, out.length(), true, keptOriginal = kept, outputPath = out.absolutePath)
     }
-
-    // ── Auxiliares ────────────────────────────────────────────────────────────
 
     private fun minVideoBitrate(shortSide: Int, mime: String, fps: Float): Long {
         var base = when {

@@ -16,6 +16,7 @@ import androidx.media3.common.util.Clock
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.FrameDropEffect
 import androidx.media3.effect.Presentation
+import androidx.media3.effect.ScaleAndRotateTransformation
 import androidx.media3.transformer.AudioEncoderSettings
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultAssetLoaderFactory
@@ -29,6 +30,7 @@ import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.VideoEncoderSettings
+import com.dskmusic.kompressall.model.VideoEdit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -139,11 +141,12 @@ object VideoCompressor {
         audioBitrate: Int,       // bps
         audioPassthrough: Boolean,
         avcLevel: Int,           // 0 = dejar que Media3 elija el nivel H.264
+        edit: VideoEdit,         // recorte y giro elegidos por el usuario
         onProgress: (Float) -> Unit
     ): String? {
         val (message, code) = runTransform(
             context, uri, outFile, videoMime, videoBitrate, outDisplayHeight, outFps, srcFps,
-            audioBitrate, audioPassthrough, avcLevel, requestCbr = true, onProgress
+            audioBitrate, audioPassthrough, avcLevel, edit, requestCbr = true, onProgress
         ) ?: return null
 
         // findEncoderWithClosestSupportedFormat filtra los encoders por resolución, bitrate y
@@ -158,7 +161,7 @@ object VideoCompressor {
             outFile.delete()
             return runTransform(
                 context, uri, outFile, videoMime, videoBitrate, outDisplayHeight, outFps, srcFps,
-                audioBitrate, audioPassthrough, avcLevel, requestCbr = false, onProgress
+                audioBitrate, audioPassthrough, avcLevel, edit, requestCbr = false, onProgress
             )?.first
         }
         return message
@@ -177,6 +180,7 @@ object VideoCompressor {
         audioBitrate: Int,
         audioPassthrough: Boolean,
         avcLevel: Int,
+        edit: VideoEdit,
         requestCbr: Boolean,
         onProgress: (Float) -> Unit
     ): Pair<String, Int>? = withContext(Dispatchers.Main) {
@@ -234,6 +238,16 @@ object VideoCompressor {
                     .build()
 
                 val effectsList = mutableListOf<Effect>()
+                // El giro va primero: la resolución de salida se calcula sobre el vídeo
+                // ya girado, así que Presentation tiene que verlo en su orientación final.
+                if (edit.rotationDegrees != 0) {
+                    // ScaleAndRotateTransformation gira en sentido antihorario; el usuario
+                    // elige grados en sentido horario, como el botón de girar de una galería.
+                    val ccw = ((360 - edit.rotationDegrees) % 360).toFloat()
+                    effectsList.add(
+                        ScaleAndRotateTransformation.Builder().setRotationDegrees(ccw).build()
+                    )
+                }
                 if (outDisplayHeight > 0) {
                     var h = outDisplayHeight
                     if (h % 2 != 0) h--
@@ -242,7 +256,15 @@ object VideoCompressor {
                 if (outFps > 0 && srcFps > outFps) {
                     effectsList.add(FrameDropEffect.createSimpleFrameDropEffect(srcFps, outFps.toFloat()))
                 }
-                val editedMediaItem = EditedMediaItem.Builder(MediaItem.fromUri(uri))
+                val mediaItemBuilder = MediaItem.Builder().setUri(uri)
+                if (edit.startMs > 0 || edit.endMs > 0) {
+                    val clipping = MediaItem.ClippingConfiguration.Builder()
+                        .setStartPositionMs(edit.startMs)
+                    // endMs == 0 significa "hasta el final": no se fija posición de fin.
+                    if (edit.endMs > edit.startMs) clipping.setEndPositionMs(edit.endMs)
+                    mediaItemBuilder.setClippingConfiguration(clipping.build())
+                }
+                val editedMediaItem = EditedMediaItem.Builder(mediaItemBuilder.build())
                     .setEffects(Effects(emptyList(), effectsList))
                     .build()
 

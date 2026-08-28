@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -71,9 +73,17 @@ fun Footer(modifier: Modifier = Modifier) {
     }
 }
 
-/** Miniatura de foto o vídeo. */
+/**
+ * Miniatura de foto, vídeo o audio. Con [onRemove] muestra un aspa para sacar el
+ * archivo del lote; con [onClick] el propio recuadro es pulsable (recorte de vídeo).
+ */
 @Composable
-fun MediaThumb(entry: MediaEntry, modifier: Modifier = Modifier) {
+fun MediaThumb(
+    entry: MediaEntry,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    onRemove: (() -> Unit)? = null
+) {
     val context = LocalContext.current
     val bitmap by produceState<Bitmap?>(initialValue = null, entry.uri) {
         value = withContext(Dispatchers.IO) {
@@ -84,27 +94,72 @@ fun MediaThumb(entry: MediaEntry, modifier: Modifier = Modifier) {
             }
         }
     }
-    Box(
-        modifier = modifier
-            .size(64.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        bitmap?.let {
-            Image(
-                bitmap = it.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
+    Box(modifier = modifier.size(72.dp)) {
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .align(Alignment.BottomStart)
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+        ) {
+            bitmap?.let {
+                Image(
+                    bitmap = it.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            when {
+                entry.isVideo -> Icon(
+                    Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.align(Alignment.Center),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+                // El audio no tiene miniatura: se muestra la extensión, que además
+                // dice de un vistazo si el archivo ya venía comprimido o no.
+                entry.isAudio -> Text(
+                    entry.name.substringAfterLast('.', "").uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+            if (entry.isVideo && entry.edit.isSet) {
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f))
+                ) {
+                    Text(
+                        androidx.compose.ui.res.stringResource(R.string.trim_badge),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+            }
         }
-        if (entry.isVideo) {
-            Icon(
-                Icons.Default.PlayArrow,
-                contentDescription = null,
-                modifier = Modifier.align(Alignment.Center),
-                tint = MaterialTheme.colorScheme.onSurface
-            )
+        if (onRemove != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.error)
+                    .clickable { onRemove() }
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = androidx.compose.ui.res.stringResource(R.string.remove_from_batch),
+                    tint = MaterialTheme.colorScheme.onError,
+                    modifier = Modifier.align(Alignment.Center).size(14.dp)
+                )
+            }
         }
     }
 }

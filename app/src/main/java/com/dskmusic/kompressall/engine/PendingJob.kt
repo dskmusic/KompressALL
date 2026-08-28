@@ -3,7 +3,9 @@ package com.dskmusic.kompressall.engine
 import android.net.Uri
 import com.dskmusic.kompressall.model.JobConfig
 import com.dskmusic.kompressall.model.MediaEntry
+import com.dskmusic.kompressall.model.MediaKind
 import com.dskmusic.kompressall.model.Preset
+import com.dskmusic.kompressall.model.VideoEdit
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -12,7 +14,10 @@ import org.json.JSONObject
 data class PendingJob(
     val items: List<MediaEntry>,
     val config: JobConfig,
-    val folderName: String
+    val folderName: String,
+    /** Bytes ya ahorrados en los intentos anteriores de este mismo lote. Se suman al
+     *  contador global solo al terminar, así que sin esto se perderían al reanudar. */
+    val savedSoFar: Long = 0L
 )
 
 fun PendingJob.toJson(): String {
@@ -23,9 +28,12 @@ fun PendingJob.toJson(): String {
                 .put("uri", item.uri.toString())
                 .put("name", item.name)
                 .put("size", item.size)
-                .put("isVideo", item.isVideo)
+                .put("kind", item.kind.name)
                 .put("dateMillis", item.dateMillis)
                 .put("realPath", item.realPath ?: JSONObject.NULL)
+                .put("trimStartMs", item.edit.startMs)
+                .put("trimEndMs", item.edit.endMs)
+                .put("rotationDegrees", item.edit.rotationDegrees)
         )
     }
     val c = config
@@ -40,12 +48,15 @@ fun PendingJob.toJson(): String {
         .put("videoFps", c.videoFps)
         .put("videoSizePct", c.videoSizePct)
         .put("audioKbps", c.audioKbps)
+        .put("audioPreset", c.audioPreset.name)
+        .put("audioOutKbps", c.audioOutKbps)
         .put("replaceOriginals", c.replaceOriginals)
         .put("backupOriginals", c.backupOriginals)
         .put("deleteOriginals", c.deleteOriginals)
         .put("twoPass", c.twoPass)
     return JSONObject()
         .put("folderName", folderName)
+        .put("savedSoFar", savedSoFar)
         .put("items", itemsArr)
         .put("config", configObj)
         .toString()
@@ -57,13 +68,24 @@ fun parsePendingJob(text: String): PendingJob? {
         val itemsArr = json.getJSONArray("items")
         val items = (0 until itemsArr.length()).map { i ->
             val o = itemsArr.getJSONObject(i)
+            // "isVideo" es el formato de versiones anteriores a la compresión de audio.
+            val kind = when {
+                o.has("kind") -> MediaKind.valueOf(o.getString("kind"))
+                o.optBoolean("isVideo") -> MediaKind.VIDEO
+                else -> MediaKind.IMAGE
+            }
             MediaEntry(
                 uri = Uri.parse(o.getString("uri")),
                 name = o.getString("name"),
                 size = o.getLong("size"),
-                isVideo = o.getBoolean("isVideo"),
+                kind = kind,
                 dateMillis = o.getLong("dateMillis"),
-                realPath = if (o.isNull("realPath")) null else o.getString("realPath")
+                realPath = if (o.isNull("realPath")) null else o.getString("realPath"),
+                edit = VideoEdit(
+                    startMs = o.optLong("trimStartMs"),
+                    endMs = o.optLong("trimEndMs"),
+                    rotationDegrees = o.optInt("rotationDegrees")
+                )
             )
         }
         if (items.isEmpty()) return null
@@ -79,12 +101,14 @@ fun parsePendingJob(text: String): PendingJob? {
             videoFps = co.getInt("videoFps"),
             videoSizePct = co.getInt("videoSizePct"),
             audioKbps = co.getInt("audioKbps"),
+            audioPreset = Preset.valueOf(co.optString("audioPreset", "MEDIUM")),
+            audioOutKbps = co.optInt("audioOutKbps", 128),
             replaceOriginals = co.getBoolean("replaceOriginals"),
             backupOriginals = co.getBoolean("backupOriginals"),
             deleteOriginals = co.getBoolean("deleteOriginals"),
             twoPass = co.getBoolean("twoPass")
         )
-        PendingJob(items, config, json.getString("folderName"))
+        PendingJob(items, config, json.getString("folderName"), json.optLong("savedSoFar"))
     } catch (_: Exception) {
         null
     }

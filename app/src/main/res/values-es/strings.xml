@@ -55,6 +55,24 @@
     <!-- Sonido / vibración de notificación -->
     <string name="compression_rules">Reglas de compresión</string>
     <string name="reset_defaults">Restablecer valores predeterminados</string>
+    <string name="auto_sync_notif_title">Comprobando carpetas vigiladas…</string>
+    <string name="auto_sync_done_title">Sincronización automática terminada</string>
+    <string name="auto_sync_section">Sincronización automática</string>
+    <string name="auto_sync_enable">Activar sincronización automática</string>
+    <string name="auto_sync_enable_desc">Comprueba periódicamente las carpetas de abajo y comprime fotos/vídeos nuevos por su cuenta, sin abrir la app.</string>
+    <string name="auto_sync_folders">Carpetas vigiladas</string>
+    <string name="auto_sync_no_folders">Todavía no has añadido ninguna carpeta</string>
+    <string name="auto_sync_add_folder">Añadir carpeta</string>
+    <string name="auto_sync_frequency">Frecuencia de comprobación</string>
+    <string name="freq_15min">15 min</string>
+    <string name="freq_30min">30 min</string>
+    <string name="freq_1h">1 h</string>
+    <string name="freq_3h">3 h</string>
+    <string name="freq_6h">6 h</string>
+    <string name="freq_12h">12 h</string>
+    <string name="freq_24h">24 h</string>
+    <string name="auto_sync_image_preset_label">Preset por defecto para fotos</string>
+    <string name="auto_sync_video_preset_label">Preset por defecto para vídeos</string>
     <string name="min_size_desc">Los archivos por debajo de este tamaño se dejan tal cual (no se comprimen).</string>
     <string name="min_size_off">Tamaño mínimo: desactivado (comprime siempre)</string>
     <string name="min_size_fmt">Tamaño mínimo: %1$.1f MB</string>
@@ -108,7 +126,7 @@
     <string name="backup_started">Respaldo iniciado, mira la notificación para ver el progreso</string>
 
     <!-- Config -->
-    <string name="batch_summary">%1$d fotos · %2$d vídeos · %3$s</string>
+    <string name="batch_summary">%1$d fotos · %2$d vídeos · %3$d audios · %4$s</string>
     <string name="images_section">Fotos</string>
     <string name="videos_section">Vídeos</string>
     <string name="preset_high">Alta</string>
@@ -213,4 +231,13 @@
     <string name="error_read_file">No se pudo leer el archivo</string>
     <string name="error_encoder">El codificador no soporta esta configuración</string>
     <string name="error_no_items">Nada que comprimir</string>
+    <string name="trim_badge">EDIT</string>
+    <string name="remove_from_batch">Quitar del lote</string>
+    <string name="bitrate_label">Bitrate (kbps)</string>
+    <string name="select_folder">Seleccionar carpeta</string>
+    <string name="add_folder">+ Añadir carpeta</string>
+    <string name="video_edit_title">Recortar y girar</string>
+    <string name="video_edit_range_fmt">De %1$s a %2$s</string>
+    <string name="video_edit_no_duration">No se ha podido leer la duración de este vídeo; aun así puedes girarlo.</string>
+    <string name="rotation_label">Giro</string>
 </resources>

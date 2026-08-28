@@ -100,6 +100,7 @@ fun HomeScreen(
     }
     val totalSaved by AppSettings.totalSavedFlow.collectAsState()
     var showHelp by remember { mutableStateOf(false) }
+    var showFolderPicker by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
@@ -244,6 +245,26 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth().height(56.dp)
             ) {
                 Text(stringResource(R.string.select_media), style = MaterialTheme.typography.titleMedium)
+            }
+            if (hasAccess) {
+                // El selector del sistema no sabe de carpetas ni de audio; con acceso
+                // total a archivos podemos recorrerlas nosotros.
+                OutlinedButton(
+                    onClick = { showFolderPicker = true },
+                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                ) {
+                    Text(stringResource(R.string.select_folder))
+                }
+            }
+            if (showFolderPicker) {
+                LocalFolderBrowserDialog(
+                    startPath = Environment.getExternalStorageDirectory().absolutePath,
+                    onDismiss = { showFolderPicker = false },
+                    onPicked = {
+                        showFolderPicker = false
+                        CompressionEngine.loadFolder(context, it)
+                    }
+                )
             }
             if (totalSaved > 0) {
                 Text(

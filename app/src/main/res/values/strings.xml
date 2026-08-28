@@ -52,6 +52,24 @@
     <!-- Notification sound / vibration -->
     <string name="compression_rules">Compression rules</string>
     <string name="reset_defaults">Reset to defaults</string>
+    <string name="auto_sync_notif_title">Checking watched folders…</string>
+    <string name="auto_sync_done_title">Auto sync finished</string>
+    <string name="auto_sync_section">Automatic sync</string>
+    <string name="auto_sync_enable">Enable automatic sync</string>
+    <string name="auto_sync_enable_desc">Periodically checks the folders below and compresses new photos/videos on its own, without opening the app.</string>
+    <string name="auto_sync_folders">Watched folders</string>
+    <string name="auto_sync_no_folders">No folders added yet</string>
+    <string name="auto_sync_add_folder">Add folder</string>
+    <string name="auto_sync_frequency">Check frequency</string>
+    <string name="freq_15min">15 min</string>
+    <string name="freq_30min">30 min</string>
+    <string name="freq_1h">1 h</string>
+    <string name="freq_3h">3 h</string>
+    <string name="freq_6h">6 h</string>
+    <string name="freq_12h">12 h</string>
+    <string name="freq_24h">24 h</string>
+    <string name="auto_sync_image_preset_label">Default preset for photos</string>
+    <string name="auto_sync_video_preset_label">Default preset for videos</string>
     <string name="min_size_desc">Files smaller than this are left as they are (not compressed).</string>
     <string name="min_size_off">Minimum size: off (compress everything)</string>
     <string name="min_size_fmt">Minimum size: %1$.1f MB</string>
@@ -105,7 +123,7 @@
     <string name="backup_started">Backup started, check the notification for progress</string>
 
     <!-- Config -->
-    <string name="batch_summary">%1$d photos · %2$d videos · %3$s</string>
+    <string name="batch_summary">%1$d photos · %2$d videos · %3$d audio · %4$s</string>
     <string name="images_section">Photos</string>
     <string name="videos_section">Videos</string>
     <string name="preset_high">High</string>
@@ -216,4 +234,13 @@
     <string name="error_read_file">Could not read the file</string>
     <string name="error_encoder">Encoder does not support this configuration</string>
     <string name="error_no_items">Nothing to compress</string>
+    <string name="trim_badge">EDIT</string>
+    <string name="remove_from_batch">Remove from batch</string>
+    <string name="bitrate_label">Bitrate (kbps)</string>
+    <string name="select_folder">Select a folder</string>
+    <string name="add_folder">+ Add folder</string>
+    <string name="video_edit_title">Trim and rotate</string>
+    <string name="video_edit_range_fmt">From %1$s to %2$s</string>
+    <string name="video_edit_no_duration">Could not read this video\'s duration; you can still rotate it.</string>
+    <string name="rotation_label">Rotation</string>
 </resources>

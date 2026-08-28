@@ -45,9 +45,11 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import com.dskmusic.kompressall.R
 import com.dskmusic.kompressall.data.Settings
+import com.dskmusic.kompressall.engine.CompressionEngine
 import com.dskmusic.kompressall.engine.VideoCompressor
 import com.dskmusic.kompressall.model.EngineState
 import com.dskmusic.kompressall.model.JobConfig
+import com.dskmusic.kompressall.model.MediaEntry
 import com.dskmusic.kompressall.model.Preset
 import com.dskmusic.kompressall.model.formatSize
 
@@ -65,6 +67,8 @@ fun ConfigScreen(
     val context = LocalContext.current
     var cfg by remember { mutableStateOf(Settings.loadConfig()) }
     var showDeleteWarning by remember { mutableStateOf(false) }
+    var showFolderPicker by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<MediaEntry?>(null) }
     val update: (JobConfig) -> Unit = { cfg = it; Settings.saveConfig(it) }
     var folderName by remember(state.folderSuggestion) { mutableStateOf(state.folderSuggestion) }
     val av1Available = remember { VideoCompressor.hasEncoder(MimeTypes.VIDEO_AV1) }
@@ -101,9 +105,16 @@ fun ConfigScreen(
             Preset.HIGH -> 0.40f; Preset.MEDIUM -> 0.18f; Preset.LOW -> 0.08f
             Preset.MANUAL -> cfg.videoSizePct / 100f
         }
-        val imgBytes = state.items.filter { !it.isVideo }.sumOf { it.size }
+        // ponytail: el audio se estima por proporción de bitrate sobre un origen
+        // "típico" de 256 kbps; sin leer la duración de cada archivo no da para más.
+        val audFraction = when (cfg.audioPreset) {
+            Preset.HIGH -> 0.75f; Preset.MEDIUM -> 0.50f; Preset.LOW -> 0.38f
+            Preset.MANUAL -> (cfg.audioOutKbps / 256f).coerceIn(0.12f, 1f)
+        }
+        val imgBytes = state.items.filter { !it.isVideo && !it.isAudio }.sumOf { it.size }
         val vidBytes = state.items.filter { it.isVideo }.sumOf { it.size }
-        (imgBytes * imgFactor + vidBytes * vidFraction).toLong()
+        val audBytes = state.items.filter { it.isAudio }.sumOf { it.size }
+        (imgBytes * imgFactor + vidBytes * vidFraction + audBytes * audFraction).toLong()
     }
 
     Column(
@@ -128,17 +139,32 @@ fun ConfigScreen(
 
         SectionCard {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(state.items) { MediaThumb(it) }
+                items(state.items, key = { it.uri }) { entry ->
+                    MediaThumb(
+                        entry,
+                        onClick = if (entry.isVideo) ({ editing = entry }) else null,
+                        onRemove = { CompressionEngine.remove(entry.uri) }
+                    )
+                }
             }
             Text(
                 stringResource(
                     R.string.batch_summary,
-                    state.imageCount, state.videoCount, formatSize(state.totalSize)
+                    state.imageCount, state.videoCount, state.audioCount,
+                    formatSize(state.totalSize)
                 ),
                 style = MaterialTheme.typography.bodyMedium
             )
-            TextButton(onClick = onAddMore, modifier = Modifier.align(Alignment.End)) {
-                Text(stringResource(R.string.add_more))
+            Row(
+                modifier = Modifier.align(Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                TextButton(onClick = { showFolderPicker = true }) {
+                    Text(stringResource(R.string.add_folder))
+                }
+                TextButton(onClick = onAddMore) {
+                    Text(stringResource(R.string.add_more))
+                }
             }
             Text(
                 stringResource(R.string.estimated_size_fmt, formatSize(estimate)),
@@ -250,6 +276,22 @@ fun ConfigScreen(
             }
         }
 
+        if (state.audioCount > 0) {
+            SectionCard(title = stringResource(R.string.audio_label)) {
+                ChoiceChips(presetOptions, cfg.audioPreset) { update(cfg.copy(audioPreset = it)) }
+                if (cfg.audioPreset == Preset.MANUAL) {
+                    Text(stringResource(R.string.bitrate_label), style = MaterialTheme.typography.labelLarge)
+                    ChoiceChips(
+                        listOf("64" to 64, "96" to 96, "128" to 128, "192" to 192, "256" to 256, "320" to 320),
+                        cfg.audioOutKbps
+                    ) { update(cfg.copy(audioOutKbps = it)) }
+                    TextButton(onClick = {
+                        update(cfg.copy(audioOutKbps = DEFAULT_CONFIG.audioOutKbps))
+                    }) { Text(stringResource(R.string.reset_defaults)) }
+                }
+            }
+        }
+
         SectionCard(
             title = stringResource(R.string.destination),
             modifier = Modifier
@@ -324,6 +366,25 @@ fun ConfigScreen(
         }
         Spacer(Modifier.height(4.dp))
         Footer(Modifier.align(Alignment.CenterHorizontally))
+    }
+
+    editing?.let { entry ->
+        VideoEditDialog(
+            entry = entry,
+            onDismiss = { editing = null },
+            onConfirm = { CompressionEngine.updateEdit(entry.uri, it); editing = null }
+        )
+    }
+
+    if (showFolderPicker) {
+        LocalFolderBrowserDialog(
+            startPath = Environment.getExternalStorageDirectory().absolutePath,
+            onDismiss = { showFolderPicker = false },
+            onPicked = {
+                showFolderPicker = false
+                CompressionEngine.loadFolder(context, it, append = true)
+            }
+        )
     }
 
     if (showDeleteWarning) {
